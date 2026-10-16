@@ -183,8 +183,6 @@ function addRow(table, value, callback) {
  */
 window.onload = async function () {
 
-    renderjson.setShowToLevel(3);
-
     document.getElementById("ok-configure").addEventListener('click', async (e) => {
 
         await command("configure");
