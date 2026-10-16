@@ -1,0 +1,8 @@
+src/request_history_viewer/__pycache__/*
+src/monitor/manager/__pycache__/*
+src/monitor/__pycache__/*
+dist/*
+libs/*
+pylib/*
+src/monitor/__pycache__/__main__.cpython-313.pyc
+src/monitor/manager/__pycache__/command.cpython-313.pyc
