@@ -1,0 +1,395 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Audit Monitor</title>
+    <link rel="icon" type="text/css" href="{{ url_for('static', filename='images/favicon.ico') }}" />
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/main.css') }}" />
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/tabview.css') }}" />
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/panelview.css') }}" />
+
+    <style>
+        textarea {
+            resize: none;
+        }
+    </style>
+
+    <script src="{{ url_for('static', filename='javascripts/util/message.js') }}"></script>
+    <script src="{{ url_for('static', filename='javascripts/gui/dataview.js') }}"></script>
+    <script src="{{ url_for('static', filename='javascripts/gui/tabview.js') }}"></script>
+    <script src="{{ url_for('static', filename='javascripts/gui/panelview.js') }}"></script>
+    <script src="{{ url_for('static', filename='javascripts/gui/barchart.js') }}"></script>
+
+</head>
+
+<body>
+    <dialog id="wait-dialog" class="dialog"
+        style="position:absolute; width:100%; height:100%; opacity: 0.5; border: none; overflow: hidden;">
+        <div style="position:absolute; width:100%; height:100%; overflow: hidden;">
+            <div id="wait-spinner" style="position:absolute; left: 50%; top: 45%; opacity: 1.0;">
+                <div style="width:48px; height:48px; z-index: 10; opacity: 1.0;" class="waiting">
+                    <img src="{{ url_for('static', filename='images/wait.svg') }}" width="48" height="48" />
+                </div>
+            </div>
+        </div>
+    </dialog>
+
+    <dialog id="error-dialog" class="dialog message-dialog" style="min-width:400px;">
+        <img src="{{url_for( 'static', filename='images/exclamation.svg')}}" width="48" height="48"
+            style="float: left; margin-right:10px;" />
+        <p id="error-message" style="font-size: 18px; font-weight: bold;">/p>
+        <form method="dialog">
+            <button class="message-dialog-small-button" style="float: right;">OK</button>
+        </form>
+    </dialog>
+
+    <dialog id="command-dialog" class="dialog" style="min-width:700px; height:550px; overflow:none">
+        <div
+            style="position:absolute; top:0px; left:5px; right:5px; height: 60px; border-bottom:2px groove rgba(0,0,0, 0.2)">
+            <p style="position:absolute; height:50px; font-size: 24px; font-weight: bold; left:10px;">
+                Configuration Settings</p>
+        </div>
+        <div style="position:absolute; top:70px; left:0px; right:0px; overflow:none">
+            <img src="{{url_for( 'static', filename='images/exclamation.svg')}}" width="128" height="128"
+                style="float: left; margin-right:10px;" />
+        </div>
+
+        <div id="configuration-tabs"
+            style="position:absolute; top:80px; left:100px; right:10px; overflow:none; padding-left:20px; margin-right:20px;">
+
+            <div class="tab">
+                <button class="tablinks" id="configuration-tab1"
+                    onclick="showTab(event, 'configuration-tabs', 'datalake-panel', 'configuration-tab1')"
+                    value="datalake">Datalake</button>
+                <button class="tablinks" id="configuration-tab2"
+                    onclick="showTab(event, 'configuration-tabs', 'identity-panel', 'configuration-tab2')"
+                    value="identity">Identity</button>
+            </div>
+
+            <div id="datalake-panel" class="tabcontent"
+                style="position:absolute; top:45px; overflow:none; padding-left:20px; left:20px; right:0px; border: 1px solid rgba(0, 0, 0, 0.2); display:inline-block;">
+                <p style=" position:relative;  font-size: 14px; font-weight: bold;">Datalake
+                    URL
+                </p>
+                <input class="modal-entry" id="datalake-url" style="position:relative; width:480px;" type="text"
+                    name="datalake-url" placeholder="https://&lt;server&gt;" required>
+                </input>
+                <p style=" position:relative;  font-size: 14px; font-weight: bold;">Namespace
+                </p>
+                <input class="modal-entry" id="datalake-namespace" style="position:relative; width:480px;" type="text"
+                    name="datalake-namespace" placeholder="namespace" required>
+                </input>
+                <p style=" position:relative; font-size: 14px; font-weight: bold;">User Id
+                </p>
+                <input class="modal-entry" id="datalake-userid" style="position:relative; width:480px;" type="text"
+                    name="datalake-userid" placeholder="userid" required>
+                </input>
+                <p style="position:relative; font-size: 14px; font-weight: bold;">Password
+                </p>
+                <input class="modal-entry" id="datalake-password"
+                    style="position:relative; width:480px; margin-bottom:85px;" type="password" name="datalake-password"
+                    placeholder="password" required></input>
+            </div>
+
+            <div id="identity-panel" class="tabcontent"
+                style="position:absolute; top:45px; overflow:none; padding-left:20px; left:20px; right:0px; border: 1px solid rgba(0, 0, 0, 0.2); display:none;">
+                <p style=" position:relative;  font-size: 14px; font-weight: bold;">Identity
+                    URL
+                </p>
+                <input class="modal-entry" id="identity-url" style="position:relative; width:480px;" type="text"
+                    name="identity-url" placeholder="https://&lt;server&gt;" required>
+                </input>
+                <p style=" position:relative; font-size: 14px; font-weight: bold;">User Id
+                </p>
+                <input class="modal-entry" id="identity-userid" style="position:relative; width:480px;" type="text"
+                    name="identity-userid" placeholder="userid" required>
+                </input>
+                <p style="position:relative; font-size: 14px; font-weight: bold;">Password
+                </p>
+                <input class="modal-entry" id="identity-password" style="position:relative; width:480px;"
+                    type="password" name="identity-password" placeholder="password" required></input>
+                <p style="position:relative; font-size: 14px; font-weight: bold;">Client ID
+                </p>
+                <input class="modal-entry" id="identity-clientid" style="position:relative; width:480px;" type="text"
+                    name="identity-clientid" placeholder="client id" required></input>
+                <p style="position:relative; font-size: 14px; font-weight: bold;">Client Secret
+                </p>
+                <input class="modal-entry" id="identity-secret"
+                    style="position:relative; width:480px; margin-bottom:20px;" type="password" name="identity-secret"
+                    placeholder="secret" required></input>
+            </div>
+        </div>
+
+        <div style="position:absolute; bottom:10px; left:10px; right:10px;">
+            <button id="cancel-command-dialog" class="close-button message-dialog-small-cancel-button server-action"
+                style="float: right; margin-top:10px; margin-right:10px; width:80px;" disabled>Cancel</button>
+
+            <button id="ok-configure" class="message-dialog-small-button server-command"
+                style="float: right; margin-top:10px; margin-right:10px; width:80px; " disabled>Configure</button>
+
+            <button id="ok-connect" class="message-dialog-small-button server-command"
+                style="float: right; margin-top:10px; margin-right:10px; width:80px;" disabled>Connect</button>
+
+            <button id="ok-reset" class="message-dialog-small-button server-command"
+                style="float: right; margin-top:10px; margin-right:10px; width:80px;" disabled>Reset</button>
+
+            <button id="ok-regenerate" class="message-dialog-small-button server-command"
+                style="float: right; margin-top:10px; margin-right:10px; width:80px;" disabled>Regenerate</button>
+
+        </div>
+
+    </dialog>
+
+    <dialog id="execute-dialog" class="dialog" style="min-width:500px; height:380px; overflow: hidden;">
+        <p style="font-size: 18px; font-weight: bold;">Execution Parameters</p>
+
+        <div style="position:absolute; top:80px; left:10px; right:10px">
+            <label for="thread-count" style="position:absolute; font-size:14px; font-weight:bold; margin-left:20px;"
+                class="field">Threads:</label>
+            <input type="range" id="thread-count" name="limit" min="10" max="100" value="10" step="10"
+                list="thread-tickmarks" style="position:absolute; top:-2px; width:340px; left:100px;"></input>
+
+            <div class="current-value" style="position:absolute; margin-top:2px; right:0px;">
+                <span id="thread-count-value">10</span>
+            </div>
+
+            <datalist id="thread-tickmarks">
+                <option value="10"></option>
+                <option value="20"></option>
+                <option value="30"></option>
+                <option value="40"></option>
+                <option value="50"></option>
+                <option value="60"></option>
+                <option value="70"></option>
+                <option value="80"></option>
+                <option value="90"></option>
+                <option value="100"></option>
+            </datalist>
+
+            <div class="slider-labels" style="display:block; position:absolute; top:18px; width:500px; left:100px;">
+                <span class="slider-tick-label">10</span>
+                <span class="slider-tick-label">&nbsp;20</span>
+                <span class="slider-tick-label">&nbsp;30</span>
+                <span class="slider-tick-label">&nbsp;&nbsp;40</span>
+                <span class="slider-tick-label">&nbsp;&nbsp;50</span>
+                <span class="slider-tick-label">&nbsp;&nbsp;60</span>
+                <span class="slider-tick-label">&nbsp;&nbsp;70</span>
+                <span class="slider-tick-label">&nbsp;80</span>
+                <span class="slider-tick-label">&nbsp;90</span>
+                <span class="slider-tick-label">&nbsp;100</span>
+            </div>
+        </div>
+
+        <div style="position:absolute; top:130px; left:10px; right:10px">
+            <label for="batch-size" style="position:absolute; font-size:14px; font-weight:bold; margin-left:20px;"
+                class="field">Batch:</label>
+            <input type="range" id="batch-size" name="limit" min="10" max="100" value="10" step="10"
+                list="batch-tickmarks" style="position:absolute; top:-2px; width:340px; left:100px;"></input>
+
+            <div class="current-value" style="position:absolute; margin-top:2px; right:0px;">
+                <span id="batch-size-value">10</span>
+            </div>
+
+            <datalist id="batch-tickmarks">
+                <option value="10"></option>
+                <option value="20"></option>
+                <option value="30"></option>
+                <option value="40"></option>
+                <option value="50"></option>
+                <option value="60"></option>
+                <option value="70"></option>
+                <option value="80"></option>
+                <option value="90"></option>
+                <option value="100"></option>
+            </datalist>
+
+            <div class="slider-labels" style="display:block; position:absolute; top:18px; width:500px; left:100px;">
+                <span class="slider-tick-label">10</span>
+                <span class="slider-tick-label">&nbsp;20</span>
+                <span class="slider-tick-label">&nbsp;30</span>
+                <span class="slider-tick-label">&nbsp;&nbsp;40</span>
+                <span class="slider-tick-label">&nbsp;&nbsp;50</span>
+                <span class="slider-tick-label">&nbsp;&nbsp;60</span>
+                <span class="slider-tick-label">&nbsp;&nbsp;70</span>
+                <span class="slider-tick-label">&nbsp;80</span>
+                <span class="slider-tick-label">&nbsp;90</span>
+                <span class="slider-tick-label">&nbsp;100</span>
+            </div>
+        </div>
+
+        <div style="position:absolute; top:180px; left:10px; right:10px">
+            <label for="checkpoint-count" style="position:absolute; font-size:14px; font-weight:bold; margin-left:20px;"
+                class="field">Checkpoint:</label>
+            <input type="range" id="checkpoint-count" name="limit" min="100" max="1000" value="100" step="100"
+                list="checkpoint-tickmarks" style="position:absolute; top:-2px; width:340px; left:100px;"></input>
+
+            <div class="current-value" style="position:absolute; margin-top:0px; right:0px;">
+                <span id="checkpoint-count-value">100</span>
+            </div>
+
+            <datalist id="checkpoint-tickmarks">
+                <option value="10"></option>
+                <option value="20"></option>
+                <option value="30"></option>
+                <option value="40"></option>
+                <option value="50"></option>
+                <option value="60"></option>
+                <option value="70"></option>
+                <option value="80"></option>
+                <option value="90"></option>
+                <option value="100"></option>
+            </datalist>
+
+            <div class="slider-labels" style="display:block; position:absolute; top:18px; width:500px; left:100px;">
+                <span class="slider-tick-label" style="margin-right:4px;">100</span>
+                <span class="slider-tick-label" style="margin-right:10px;">200</span>
+                <span class="slider-tick-label" style="margin-right:10px;">300</span>
+                <span class="slider-tick-label" style="margin-right:10px;">400</span>
+                <span class="slider-tick-label" style="margin-right:10px;">500</span>
+                <span class="slider-tick-label" style="margin-right:10px;">600</span>
+                <span class="slider-tick-label" style="margin-right:10px;">700</span>
+                <span class="slider-tick-label" style="margin-right:10px;">800</span>
+                <span class="slider-tick-label" style="margin-right:10px;">900</span>
+                <span class="slider-tick-label" style="margin-right:10px;">1000</span>
+           </div>
+        </div>
+
+        <div style="position:absolute; top:230px; left:10px; right:10px">
+            <label for="page-size" style="position:absolute; font-size:14px; font-weight:bold; margin-left:20px;"
+                class="field">Page Size:</label>
+            <input type="range" id="page-size"" name="limit" min="100" max="1000" value="100" step="100"
+                list="page-size-tickmarks" style="position:absolute; top:-2px; width:340px; left:100px;"></input>
+
+            <div class="current-value" style="position:absolute; margin-top:0px; right:0px;">
+                <span id="page-size-value">100</span>
+            </div>
+
+            <datalist id="page-size-tickmarks">
+                <option value="100"></option>
+                <option value="200"></option>
+                <option value="300"></option>
+                <option value="400"></option>
+                <option value="500"></option>
+                <option value="600"></option>
+                <option value="700"></option>
+                <option value="800"></option>
+                <option value="900"></option>
+                <option value="1000"></option>
+            </datalist>
+
+            <div class="slider-labels" style="display:block; position:absolute; top:18px; width:500px; left:100px;">
+                <span class="slider-tick-label" style="margin-right:4px;">100</span>
+                <span class="slider-tick-label" style="margin-right:10px;">200</span>
+                <span class="slider-tick-label" style="margin-right:10px;">300</span>
+                <span class="slider-tick-label" style="margin-right:10px;">400</span>
+                <span class="slider-tick-label" style="margin-right:10px;">500</span>
+                <span class="slider-tick-label" style="margin-right:10px;">600</span>
+                <span class="slider-tick-label" style="margin-right:10px;">700</span>
+                <span class="slider-tick-label" style="margin-right:10px;">800</span>
+                <span class="slider-tick-label" style="margin-right:10px;">900</span>
+                <span class="slider-tick-label" style="margin-right:10px;">1000</span>
+            </div>
+        </div>
+
+        <div style="position:absolute; bottom:10px; left:10px; right:10px;">
+            <button id="ok-execute-dialog" class="message-dialog-small-button"
+                style="position:absolute; right:80px; bottom:10px; margin-top:10px;">Execute</button>
+
+            <button id="cancel-execute-dialog" class="close-button message-dialog-small-cancel-button server-action"
+                style="position:absolute; bottom:10px; right:0px; margin-top:30px; width:70px;" disabled>Cancel</button>
+        </div>
+
+    </dialog>
+
+    <div style="position:absolute; left:0px; right:0px; top:0px; height:30px; -webkit-app-region: drag;">
+        <div class="header" style="position:absolute; top:-5px; left:10px; right:10px;">
+            <p>Audit&nbsp;Monitor</p>
+            <div class="toolbar" style="position:absolute; top:15px; left:10px; right:0px;">
+
+                <button id="refresh-button" class="message-dialog-small-button server-action"
+                    style="float:right; height:24px; width:40px; margin-right:10px" disabled>
+                    <img src="{{ url_for('static', filename='images/refresh.svg') }}" width="18" height="18"></img>
+                </button>
+                <button id="command-button" class="message-dialog-small-button server-action"
+                    style="float:right; height:24px; width:40px; margin-right:10px" disabled>
+                    <img src="{{ url_for('static', filename='images/connect.svg') }}" width="18" height="18"></img>
+                </button>
+                <button id="execute-button" class="message-dialog-small-button server-action"
+                    style="float:right; height:24px; width:40px; margin-right:10px" disabled>
+                    <img src="{{ url_for('static', filename='images/running.svg') }}" width="18" height="18"></img>
+                </button>
+
+            </div>
+        </div>
+    </div>
+
+    <div id="log-panel"
+        style="display:inline-block; position: absolute; top: 44px; bottom: 30px; width:440px; left: 10px; border: 1px solid rgba(0, 0, 0, 0.2);">
+        <table id="log-messages" class="log-table">
+        </table>
+    </div>
+
+    <div id="monitor-panel"
+        style="display:inline-block; position: absolute; top: 44px; bottom: 30px; left: 460px; right: 10px; border: 1px solid rgba(0, 0, 0, 0.2);">
+        <div id="containers" style="position:absolute; top:5px; left:5px; right:5px; bottom:5px; overflow:auto;">
+            <div
+                style="position:relative; height:20px; font-size:12px; margin-top:5px; margin-left:10px; margin-bottom:15px;">
+                <button id="writes-collapse" class="undecorated-button" style="width:18px; height:16px;">
+                    <img id="writes-collapse-image" src="{{ url_for('static', filename='images/expand.svg') }}"
+                        style="margin-left:-6px;margin-top:-2px;" width="14" height="14"></img>
+                </button>
+                <label id="writes-label" class="truncate-label" style="margin-left:-5px">Datalake Writes (count)<label>
+            </div>
+            <div id="writes-container"
+                style="position:relative; height:180px; overflow:none;  font-family: sans-serif; font-size: 12px; padding:5px;">
+            </div>
+            <div
+                style="position:relative; height:20px; font-size:12px; margin-top:5px; margin-left:10px; margin-bottom:15px;">
+                <button id="throughput-collapse" class="undecorated-button" style="width:18px; height:16px;">
+                    <img id="throughput-collapse-image" src="{{ url_for('static', filename='images/expand.svg') }}"
+                        style="margin-left:-6px;margin-top:-2px;" width="14" height="14"></img>
+                </button>
+                <label id="throughput-label" class="truncate-label" style="margin-left:-5px">Datalake Throughput
+                    (bytes)<label>
+            </div>
+            <div id="throughput-container"
+                style="position:relative; height:180px; overflow:none; font-family: sans-serif; font-size: 12px; padding:5px;">
+            </div>
+
+            <div
+                style="position:relative; height:20px; font-size:12px; margin-top:5px; margin-left:10px; margin-bottom:15px;">
+                <button id="executes-collapse" class="undecorated-button" style="width:18px; height:16px;">
+                    <img id="executes-collapse-image" src="{{ url_for('static', filename='images/expand.svg') }}"
+                        style="margin-left:-6px;margin-top:-2px;" width="14" height="14"></img>
+                </button>
+                <label id="executes-label" class="truncate-label" style="margin-left:-5px">Execution Counts
+                    (count)<label>
+            </div>
+
+            <div id="executes-container"
+                style="position:relative; height:180px; overflow:none; font-family: sans-serif; font-size: 12px; padding:5px;">
+            </div>
+
+            <div
+                style="position:relative; height:20px; font-size:12px; margin-top:5px; margin-left:10px; margin-bottom:15px;">
+                <button id="execute-times-collapse" class="undecorated-button" style="width:18px; height:16px;">
+                    <img id="execute-times-collapse-image" src="{{ url_for('static', filename='images/expand.svg') }}"
+                        style="margin-left:-6px;margin-top:-2px;" width="14" height="14"></img>
+                </button>
+                <label id="execute-times-label" class="truncate-label" style="margin-left:-5px">Execution Times
+                    (ms)<label>
+            </div>
+            <div id="execute-times-container"
+                style="position:relative; height:180px; overflow:none; font-family: sans-serif; font-size: 12px; padding:5px;">
+            </div>
+        </div>
+    </div>
+
+    <div id="status" class="status-message" style="position:absolute; bottom:10px; left:6px;">
+    </div>
+</body>
+
+<script src="{{ url_for('static', filename='javascripts/main.js') }}"></script>
+
+</html>
