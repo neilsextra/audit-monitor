@@ -1,7 +1,8 @@
 # Audit Monitor
 
-To build audit moonitor
+To build audit monitor
 
+> Note: the **nexus** configuration is optional 
 ```
 py -m pip install [--trusted-host nexus.hostname.org.au --index-url "https://userid:password@nexus.hostname.org.au/repository/pypi-org/simple"] -r requirements.txt --target "./pylib"
 ```
