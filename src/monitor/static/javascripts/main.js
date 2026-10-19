@@ -93,6 +93,9 @@ function enable(className, enable = true) {
 async function updateStatus() {
     var message = new Message();
     var response = await message.monitor();
+
+    console.log(JSON.stringify(response));
+
     var table = document.getElementById("log-messages");
 
     table.replaceChildren();
@@ -113,6 +116,34 @@ async function updateStatus() {
         cell.innerHTML = entry.message;
 
     }
+    
+    var counters = response.response.counters;
+    var currentHour = new Date(Date.now()).getHours();
+
+    console.log(JSON.stringify(counters));
+
+    barchartWrites.setOptimumScale(counters.puts);
+    barchartThroughput.setOptimumScale(counters.throughput);
+ 
+    barchartExecutes.setOptimumScale(counters.requests);
+    barchartExecuteTimes.setOptimumScale(counters.transactions);
+
+    barchartWrites.draw(counters.puts, currentHour, "#008080", "#ccffff", 0);
+    barchartThroughput.draw(counters.throughput, currentHour, "#008080", "#ccffff", 2);
+  
+    barchartExecutes.draw(counters.transactions, currentHour, "#008080", "#ccffff", 0);
+    barchartExecuteTimes.draw(counters.throughput, currentHour, "#008080", "#ccffff", 0);
+
+    document.getElementById("writes-label").innerHTML =
+        `Writes Datalake (Units : ${barchartWrites.precision}) - ${Math.trunc(counters.puts[currentHour] / barchartWrites.precision)}`;
+    document.getElementById("throughput-label").innerHTML =
+        `Throughput Datalake (Units : ${barchartThroughput.precision}) - ${Math.trunc(counters.throughput[currentHour] / barchartThroughput.precision)}`;
+
+    document.getElementById("executes-label").innerHTML =
+        `Execution (Units : ${barchartExecutes.precision}) - ${Math.trunc(counters.requests[currentHour] / barchartExecutes.precision)}`;
+
+    document.getElementById("execute-times-label").innerHTML =
+        `Execution Times (Units : ${barchartExecuteTimes.precision}) - ${Math.trunc(counters.transactions[currentHour] / barchartExecuteTimes.precision)}`;
 
 }
 
