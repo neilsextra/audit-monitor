@@ -68,7 +68,7 @@ def get_command():
          
         response_get_tokens = command.get_tokens(identity_url, identity_userid, identity_password,  identity_clientid, identity_secret)
 
-        result["tokens"] = response_get_tokens
+        result["control"] = response_get_tokens
 
         app.logger.info(f'{json.dumps(response_get_tokens)}')
 
@@ -91,7 +91,7 @@ def get_command():
             else:
                 result['status'] = "table-exists"
 
-            storage.put_row(datalake_url, datalake_namespace, datalake_userid, datalake_password, host_name, "$", "json", "tokens", json.dumps(result))
+            storage.put_row(datalake_url, datalake_namespace, datalake_userid, datalake_password, host_name, "$", "json", "service", json.dumps(result))
 
             monitor.message(f"[{command_action}] Datalake table - '{host_name}' put token")
 
@@ -140,7 +140,7 @@ def get_execute():
             "datalake_userid": request.headers.get('datalake-userid'),
             "datalake_password": request.headers.get('datalake-password'), 
             "identity_url": request.headers.get('identity-url'),
-            "identity_client": request.headers.get('identity-client'),
+            "identity_client": request.headers.get('identity-clientid'),
             "identity_secret": request.headers.get('identity-secret'),
             "threads": int(request.values.get('threads', '10')),
             "batch_size": int(request.values.get('batch-size', '10')),
