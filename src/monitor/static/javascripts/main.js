@@ -318,22 +318,22 @@ window.onload = async function () {
 
     document.getElementById(`thread-count`).addEventListener('input', function (event) {
         var directory = window.directory;
-        document.getElementById(`thread-count-value`).textContent = event.target.value;
+        document.getElementById(`thread-count-value`).innerHTML = event.target.value;
     });
 
     document.getElementById(`batch-size`).addEventListener('input', function (event) {
         var directory = window.directory;
-        document.getElementById(`batch-size-value`).textContent = event.target.value;
+        document.getElementById(`batch-size-value`).innerHTML = event.target.value;
     });
 
     document.getElementById(`checkpoint-count`).addEventListener('input', function (event) {
         var directory = window.directory;
-        document.getElementById(`checkpoint-count-value`).textContent = event.target.value;
+        document.getElementById(`checkpoint-count-value`).innerHTML = event.target.value;
     });
 
     document.getElementById(`page-size`).addEventListener('input', function (event) {
         var directory = window.directory;
-        document.getElementById(`page-size-value`).textContent = event.target.value;
+        document.getElementById(`page-size-value`).innerHTML = event.target.value;
     });
 
     document.getElementById(`command-dialog`).addEventListener('input', function (event) {
