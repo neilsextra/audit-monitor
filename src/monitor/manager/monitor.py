@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import threading
 import time
 
@@ -9,20 +9,20 @@ class Monitor:
 
         self.job_queue = []
         
-        self.current_hour = -1
+        self.datetime = datetime.now()
 
         self.counters = {}
 
         self.counters["requests"]  = [0] * 24
         self.counters["transactions"]  = [0] * 24
-        self.counters["throughtput"]  = [0] * 24
+        self.counters["throughput"]  = [0] * 24
         self.counters["puts"]  = [0] * 24
 
         self.log = []
 
         self.start_time = time.time()
 
-        print(f"Monitor - [__init__] - completed")
+        print(f"[monitor] - completed")
 
     def set_logger(self, logger):
         self.logger = logger
@@ -30,27 +30,35 @@ class Monitor:
     def init(self):
         now = datetime.now()
 
-        if self.current_hour != now.hour:
-            print(f"Initialising counters")
+        time_difference = abs(now - self.datetime)
 
+        if time_difference > timedelta(days=1):
+     
             for key, value in self.counters.items():
-                print(f"{now.hour} : {key} : {value} : {len(value)}")
-                value[now.hour] = 0
+                print(f"Initialising : {key} - {time_difference} = 0")
+                
+                self.counters[key] = [0] * 24
+               
+        if (self.datetime.hour != now.hour):
+            for key, value in self.counters.items():
+                print(f"{now.hour} : {key}")
+                self.counters[key][now.hour] = 0
+            
+            self.datetime = now
 
         return now.hour
 
     def add_counter(self, counter, value):
+        
         hour = self.init()
 
         self.counters[counter][hour] += value  
 
     def  inc_counter(self, counter):
-        print(f"Incrementing counter [before] - '{counter}'.")
-        hour = self.init()
-        print(f"Incremented counter [after] - '{counter}'.")
-        self.counters[counter][hour] += 1 
 
-        print(f"Incremented counter '{counter}'.")
+        self.add_counter(counter, 1)
+
+        print(f"Incremented counter '{counter}'")
 
     def message(self, message:str):
         print(f"{time.time()}: {message}")
