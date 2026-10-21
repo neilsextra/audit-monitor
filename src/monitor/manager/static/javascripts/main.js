@@ -5,7 +5,6 @@ var userList = [];
 var entryList = [];
 var rows = [];
 
-var barchartWrites = null;
 var barchartThroughput = null;
 var barchartExecutes = null;
 var barchartExecuteTimes = null;
@@ -120,22 +119,16 @@ async function updateStatus() {
     var counters = response.response.counters;
     var currentHour = new Date(Date.now()).getHours();
 
-    console.log(JSON.stringify(counters));
-
-    barchartWrites.setOptimumScale(counters.puts);
     barchartThroughput.setOptimumScale(counters.throughput);
  
     barchartExecutes.setOptimumScale(counters.requests);
     barchartExecuteTimes.setOptimumScale(counters.transactions);
 
-    barchartWrites.draw(counters.puts, currentHour, "#008080", "#ccffff", 0);
     barchartThroughput.draw(counters.throughput, currentHour, "#008080", "#ccffff", 2);
   
     barchartExecutes.draw(counters.requests, currentHour, "#008080", "#ccffff", 0);
     barchartExecuteTimes.draw(counters.throughput, currentHour, "#008080", "#ccffff", 0);
 
-    document.getElementById("writes-label").innerHTML =
-        `Writes Datalake (Units : ${barchartWrites.precision}) - ${Math.trunc(counters.puts[currentHour] / barchartWrites.precision)}`;
     document.getElementById("throughput-label").innerHTML =
         `Throughput Datalake (Units : ${barchartThroughput.precision}) - ${Math.trunc(counters.throughput[currentHour] / barchartThroughput.precision)}`;
 
@@ -269,11 +262,10 @@ window.onload = async function () {
     document.getElementById("ok-execute-dialog").addEventListener('click', async (e) => {
 
         try {
-            document.getElementById("wait-dialog").showModal();
-
+ 
             var message = new Message();
 
-            var response = await message.execute(
+            message.execute(
                 document.getElementById("datalake-url").value,
                 document.getElementById("datalake-namespace").value,
                 document.getElementById("datalake-userid").value,
@@ -289,10 +281,10 @@ window.onload = async function () {
                 document.getElementById("page-size").value
             );
 
-            updateStatus();
+            window.setTimeout(function () {
+                 updateStatus();
+            }, 1000);
 
-            document.getElementById("")
-            document.getElementById("wait-dialog").close();
             document.getElementById("execute-dialog").close();
 
         } catch (exception) {
@@ -305,6 +297,10 @@ window.onload = async function () {
 
             document.getElementById("wait-dialog").close();
             showError(exception.message);
+
+            window.setTimeout(function () {
+                 updateStatus();
+            }, 1000);
 
         }
 
@@ -348,14 +344,12 @@ window.onload = async function () {
 
     });
 
-    barchartWrites = new BarChart("writes-container", 24);
     barchartThroughput = new BarChart("throughput-container", 24);
     barchartExecutes = new BarChart("executes-container", 24);
     barchartExecuteTimes = new BarChart("execute-times-container", 24);
 
     var panelView = new PanelView("static/images/expand.svg", "static/images/contract.svg");
 
-    panelView.decorate("writes-collapse", "writes-collapse-image", "writes-container", true);
     panelView.decorate("throughput-collapse", "throughput-collapse-image", "throughput-container", true);
     panelView.decorate("executes-collapse", "executes-collapse-image", "executes-container", true);
     panelView.decorate("execute-times-collapse", "execute-times-collapse-image", "execute-times-container", true);
