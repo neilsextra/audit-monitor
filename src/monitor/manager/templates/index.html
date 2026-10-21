@@ -5,9 +5,7 @@
     <meta charset="utf-8">
     <title>Audit Monitor</title>
     <link rel="icon" type="text/css" href="{{ url_for('static', filename='images/favicon.ico') }}" />
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/tableview.css') }}" />
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/main.css') }}" />
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/jsonview.css') }}" />
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/tabview.css') }}" />
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/panelview.css') }}" />
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles/slider.css') }}" />
@@ -19,9 +17,6 @@
     </style>
 
     <script src="{{ url_for('static', filename='javascripts/util/message.js') }}"></script>
-    <script src="{{ url_for('static', filename='javascripts/gui/tableview.js') }}"></script>
-    <script src="{{ url_for('static', filename='javascripts/gui/dataview.js') }}"></script>
-    <script src="{{ url_for('static', filename='javascripts/gui/jsonview.js') }}"></script>
     <script src="{{ url_for('static', filename='javascripts/gui/tabview.js') }}"></script>
     <script src="{{ url_for('static', filename='javascripts/gui/panelview.js') }}"></script>
     <script src="{{ url_for('static', filename='javascripts/gui/barchart.js') }}"></script>
@@ -146,154 +141,160 @@
 
     </dialog>
 
-    <dialog id="execute-dialog" class="dialog" style="min-width:500px; height:380px; overflow: hidden;">
-        <p style="font-size: 18px; font-weight: bold;">Execution Parameters</p>
+    <dialog id="execute-dialog" class="dialog" style="min-width:620px; height:440px; overflow: hidden;">
+        <p style="font-size: 18px; font-weight: bold; border-bottom:2px groove rgba(0,0,0, 0.2)">Execution Parameters
+        </p>
 
-        <div style="position:absolute; top:80px; left:10px; right:10px">
-            <label for="thread-count" style="position:absolute; font-size:14px; font-weight:bold; margin-left:20px;"
-                class="field">Threads:</label>
-            <input type="range" id="thread-count" name="limit" min="10" max="100" value="10" step="10"
-                list="thread-tickmarks" style="position:absolute; top:-2px; width:340px; left:100px;"></input>
-
-            <div class="current-value" style="position:absolute; margin-top:2px; right:0px;">
-                <span id="thread-count-value">10</span>
-            </div>
-
-            <datalist id="thread-tickmarks">
-                <option value="10"></option>
-                <option value="20"></option>
-                <option value="30"></option>
-                <option value="40"></option>
-                <option value="50"></option>
-                <option value="60"></option>
-                <option value="70"></option>
-                <option value="80"></option>
-                <option value="90"></option>
-                <option value="100"></option>
-            </datalist>
-
-            <div class="slider-labels" style="display:block; position:absolute; top:18px; width:500px; left:100px;">
-                <span class="slider-tick-label">10</span>
-                <span class="slider-tick-label">&nbsp;20</span>
-                <span class="slider-tick-label">&nbsp;30</span>
-                <span class="slider-tick-label">&nbsp;&nbsp;40</span>
-                <span class="slider-tick-label">&nbsp;&nbsp;50</span>
-                <span class="slider-tick-label">&nbsp;&nbsp;60</span>
-                <span class="slider-tick-label">&nbsp;&nbsp;70</span>
-                <span class="slider-tick-label">&nbsp;80</span>
-                <span class="slider-tick-label">&nbsp;90</span>
-                <span class="slider-tick-label">&nbsp;100</span>
-            </div>
+        <div style="position:absolute; top:90px; left:0px; right:0px; overflow:none">
+            <img src="{{url_for( 'static', filename='images/running.svg')}}" width="128" height="128"
+                style="float: left; margin-right:10px;" />
         </div>
 
-        <div style="position:absolute; top:130px; left:10px; right:10px">
-            <label for="batch-size" style="position:absolute; font-size:14px; font-weight:bold; margin-left:20px;"
-                class="field">Batch:</label>
-            <input type="range" id="batch-size" name="limit" min="10" max="100" value="10" step="10"
-                list="batch-tickmarks" style="position:absolute; top:-2px; width:340px; left:100px;"></input>
+        <div style="position:absolute; top:100px; left:120px; right:10px; bottom:60px;">
+            <div class="execution-options" style="border: 1px solid rgba(0, 0, 0, 0.2);">
+                <div class="execution-option" style="display:block; width:550px; height:40px;">
+                    <label for="thread-count"
+                        style="display:inline-block; width:80px; font-size:14px; font-weight:bold; margin-left:20px;"
+                        class="field">Threads:</label>
+                    <input type="range" id="thread-count" name="limit" min="10" max="100" value="10" step="10"
+                        list="thread-tickmarks" style="width:340px; left:80px;"></input>
 
-            <div class="current-value" style="position:absolute; margin-top:2px; right:0px;">
-                <span id="batch-size-value">10</span>
-            </div>
+                    <label id="thread-count-value" class="current-value">10</label>
 
-            <datalist id="batch-tickmarks">
-                <option value="10"></option>
-                <option value="20"></option>
-                <option value="30"></option>
-                <option value="40"></option>
-                <option value="50"></option>
-                <option value="60"></option>
-                <option value="70"></option>
-                <option value="80"></option>
-                <option value="90"></option>
-                <option value="100"></option>
-            </datalist>
+                    <datalist id="thread-tickmarks">
+                        <option value="10"></option>
+                        <option value="20"></option>
+                        <option value="30"></option>
+                        <option value="40"></option>
+                        <option value="50"></option>
+                        <option value="60"></option>
+                        <option value="70"></option>
+                        <option value="80"></option>
+                        <option value="90"></option>
+                        <option value="100"></option>
+                    </datalist>
 
-            <div class="slider-labels" style="display:block; position:absolute; top:18px; width:500px; left:100px;">
-                <span class="slider-tick-label">10</span>
-                <span class="slider-tick-label">&nbsp;20</span>
-                <span class="slider-tick-label">&nbsp;30</span>
-                <span class="slider-tick-label">&nbsp;&nbsp;40</span>
-                <span class="slider-tick-label">&nbsp;&nbsp;50</span>
-                <span class="slider-tick-label">&nbsp;&nbsp;60</span>
-                <span class="slider-tick-label">&nbsp;&nbsp;70</span>
-                <span class="slider-tick-label">&nbsp;80</span>
-                <span class="slider-tick-label">&nbsp;90</span>
-                <span class="slider-tick-label">&nbsp;100</span>
-            </div>
-        </div>
+                    <div class="slider-labels" style="display:block; margin-left:100px; top:18px; width:460px;">
+                        <span class="slider-tick-label">10</span>
+                        <span class="slider-tick-label">&nbsp;20</span>
+                        <span class="slider-tick-label">&nbsp;30</span>
+                        <span class="slider-tick-label">&nbsp;&nbsp;40</span>
+                        <span class="slider-tick-label">&nbsp;&nbsp;50</span>
+                        <span class="slider-tick-label">&nbsp;&nbsp;60</span>
+                        <span class="slider-tick-label">&nbsp;&nbsp;70</span>
+                        <span class="slider-tick-label">&nbsp;80</span>
+                        <span class="slider-tick-label">&nbsp;90</span>
+                        <span class="slider-tick-label">&nbsp;100</span>
+                    </div>
+                </div>
 
-        <div style="position:absolute; top:180px; left:10px; right:10px">
-            <label for="checkpoint-count" style="position:absolute; font-size:14px; font-weight:bold; margin-left:20px;"
-                class="field">Checkpoint:</label>
-            <input type="range" id="checkpoint-count" name="limit" min="100" max="1000" value="100" step="100"
-                list="checkpoint-tickmarks" style="position:absolute; top:-2px; width:340px; left:100px;"></input>
+                <div class="execution-option" style="height:40px; width:550px;">
+                    <label for="batch-size"
+                        style="display:inline-block; width:80px; font-size:14px; font-weight:bold; margin-left:20px;"
+                        class="field">Batch:</label>
+                    <input type="range" id="batch-size" name="limit" min="10" max="100" value="10" step="10"
+                        list="batch-tickmarks" style="width:340px; left:80px;"></input>
 
-            <div class="current-value" style="position:absolute; margin-top:0px; right:0px;">
-                <span id="checkpoint-count-value">100</span>
-            </div>
+                    <label id="batch-size-value" class="current-value" style="margin-top:2px; right:0px;">10</label>
 
-            <datalist id="checkpoint-tickmarks">
-                <option value="10"></option>
-                <option value="20"></option>
-                <option value="30"></option>
-                <option value="40"></option>
-                <option value="50"></option>
-                <option value="60"></option>
-                <option value="70"></option>
-                <option value="80"></option>
-                <option value="90"></option>
-                <option value="100"></option>
-            </datalist>
+                    <datalist id="batch-tickmarks">
+                        <option value="10"></option>
+                        <option value="20"></option>
+                        <option value="30"></option>
+                        <option value="40"></option>
+                        <option value="50"></option>
+                        <option value="60"></option>
+                        <option value="70"></option>
+                        <option value="80"></option>
+                        <option value="90"></option>
+                        <option value="100"></option>
+                    </datalist>
 
-            <div class="slider-labels" style="display:block; position:absolute; top:18px; width:500px; left:100px;">
-                <span class="slider-tick-label" style="margin-right:4px;">100</span>
-                <span class="slider-tick-label" style="margin-right:10px;">200</span>
-                <span class="slider-tick-label" style="margin-right:10px;">300</span>
-                <span class="slider-tick-label" style="margin-right:10px;">400</span>
-                <span class="slider-tick-label" style="margin-right:10px;">500</span>
-                <span class="slider-tick-label" style="margin-right:10px;">600</span>
-                <span class="slider-tick-label" style="margin-right:10px;">700</span>
-                <span class="slider-tick-label" style="margin-right:10px;">800</span>
-                <span class="slider-tick-label" style="margin-right:10px;">900</span>
-                <span class="slider-tick-label" style="margin-right:10px;">1000</span>
-           </div>
-        </div>
+                    <div class="slider-labels" style="display:block; margin-left:100px; top:18px; width:460px;">
+                        <span class="slider-tick-label">10</span>
+                        <span class="slider-tick-label">&nbsp;20</span>
+                        <span class="slider-tick-label">&nbsp;30</span>
+                        <span class="slider-tick-label">&nbsp;&nbsp;40</span>
+                        <span class="slider-tick-label">&nbsp;&nbsp;50</span>
+                        <span class="slider-tick-label">&nbsp;&nbsp;60</span>
+                        <span class="slider-tick-label">&nbsp;&nbsp;70</span>
+                        <span class="slider-tick-label">&nbsp;80</span>
+                        <span class="slider-tick-label">&nbsp;90</span>
+                        <span class="slider-tick-label">&nbsp;100</span>
+                    </div>
+                </div>
 
-        <div style="position:absolute; top:230px; left:10px; right:10px">
-            <label for="page-size" style="position:absolute; font-size:14px; font-weight:bold; margin-left:20px;"
-                class="field">Page Size:</label>
-            <input type="range" id="page-size"" name="limit" min="100" max="1000" value="100" step="100"
-                list="page-size-tickmarks" style="position:absolute; top:-2px; width:340px; left:100px;"></input>
+                <div class="execution-option" style="width:550px; height:40px;">
+                    <label for="checkpoint-count"
+                        style="display:inline-block; width:80px; font-size:14px; font-weight:bold; margin-left:20px;"
+                        class="field">Checkpoint:</label>
+                    <input type="range" id="checkpoint-count" name="limit" min="100" max="1000" value="100" step="100"
+                        list="checkpoint-tickmarks" style="width:340px; left:80px;"></input>
 
-            <div class="current-value" style="position:absolute; margin-top:0px; right:0px;">
-                <span id="page-size-value">100</span>
-            </div>
+                    <label id="checkpoint-count-value" class="current-value">100</label>
 
-            <datalist id="page-size-tickmarks">
-                <option value="100"></option>
-                <option value="200"></option>
-                <option value="300"></option>
-                <option value="400"></option>
-                <option value="500"></option>
-                <option value="600"></option>
-                <option value="700"></option>
-                <option value="800"></option>
-                <option value="900"></option>
-                <option value="1000"></option>
-            </datalist>
+                    <datalist id="checkpoint-tickmarks">
+                        <option value="100"></option>
+                        <option value="200"></option>
+                        <option value="300"></option>
+                        <option value="400"></option>
+                        <option value="500"></option>
+                        <option value="600"></option>
+                        <option value="700"></option>
+                        <option value="800"></option>
+                        <option value="900"></option>
+                        <option value="1000"></option>
+                    </datalist>
 
-            <div class="slider-labels" style="display:block; position:absolute; top:18px; width:500px; left:100px;">
-                <span class="slider-tick-label" style="margin-right:4px;">100</span>
-                <span class="slider-tick-label" style="margin-right:10px;">200</span>
-                <span class="slider-tick-label" style="margin-right:10px;">300</span>
-                <span class="slider-tick-label" style="margin-right:10px;">400</span>
-                <span class="slider-tick-label" style="margin-right:10px;">500</span>
-                <span class="slider-tick-label" style="margin-right:10px;">600</span>
-                <span class="slider-tick-label" style="margin-right:10px;">700</span>
-                <span class="slider-tick-label" style="margin-right:10px;">800</span>
-                <span class="slider-tick-label" style="margin-right:10px;">900</span>
-                <span class="slider-tick-label" style="margin-right:10px;">1000</span>
+                    <div class="slider-labels" style="display:block; margin-left:100px; top:18px; width:460px;">
+                        <span class="slider-tick-label" style="margin-right:4px;">100</span>
+                        <span class="slider-tick-label" style="margin-right:10px;">200</span>
+                        <span class="slider-tick-label" style="margin-right:10px;">300</span>
+                        <span class="slider-tick-label" style="margin-right:10px;">400</span>
+                        <span class="slider-tick-label" style="margin-right:10px;">500</span>
+                        <span class="slider-tick-label" style="margin-right:10px;">600</span>
+                        <span class="slider-tick-label" style="margin-right:10px;">700</span>
+                        <span class="slider-tick-label" style="margin-right:10px;">800</span>
+                        <span class="slider-tick-label" style="margin-right:10px;">900</span>
+                        <span class="slider-tick-label" style="margin-right:10px;">1000</span>
+                    </div>
+                </div>
+
+                <div class="execution-option" style="width:550px; height:60px;">
+                    <label for="page-size"
+                        style="display:inline-block; width:80px; font-size:14px; font-weight:bold; margin-left:20px;"
+                        class="field">Page Size:</label>
+                    <input type="range" id="page-size" name=" limit" min="100" max="1000" value="100" step="100"
+                        list="page-size-tickmarks" style="top:-2px; width:340px; left:100px;"></input>
+
+                    <label id="page-size-value" class="current-value">100</label>
+
+                    <datalist id="page-size-tickmarks">
+                        <option value="100"></option>
+                        <option value="200"></option>
+                        <option value="300"></option>
+                        <option value="400"></option>
+                        <option value="500"></option>
+                        <option value="600"></option>
+                        <option value="700"></option>
+                        <option value="800"></option>
+                        <option value="900"></option>
+                        <option value="1000"></option>
+                    </datalist>
+
+                    <div class="slider-labels" style="display:block; margin-left:100px; top:18px; width:460px;">
+                        <span class="slider-tick-label" style="margin-right:4px;">100</span>
+                        <span class="slider-tick-label" style="margin-right:10px;">200</span>
+                        <span class="slider-tick-label" style="margin-right:10px;">300</span>
+                        <span class="slider-tick-label" style="margin-right:10px;">400</span>
+                        <span class="slider-tick-label" style="margin-right:10px;">500</span>
+                        <span class="slider-tick-label" style="margin-right:10px;">600</span>
+                        <span class="slider-tick-label" style="margin-right:10px;">700</span>
+                        <span class="slider-tick-label" style="margin-right:10px;">800</span>
+                        <span class="slider-tick-label" style="margin-right:10px;">900</span>
+                        <span class="slider-tick-label" style="margin-right:10px;">1000</span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -330,7 +331,7 @@
     </div>
 
     <div id="log-panel"
-        style="display:inline-block; position: absolute; top: 44px; bottom: 30px; width:440px; left: 10px; border: 1px solid rgba(0, 0, 0, 0.2);">
+        style="display:inline-block; position: absolute; top: 44px; bottom: 30px; width:440px; left: 10px; border: 1px solid rgba(0, 0, 0, 0.2); overflow:auto">
         <table id="log-messages" class="log-table">
         </table>
     </div>
@@ -338,17 +339,6 @@
     <div id="monitor-panel"
         style="display:inline-block; position: absolute; top: 44px; bottom: 30px; left: 460px; right: 10px; border: 1px solid rgba(0, 0, 0, 0.2);">
         <div id="containers" style="position:absolute; top:5px; left:5px; right:5px; bottom:5px; overflow:auto;">
-            <div
-                style="position:relative; height:20px; font-size:12px; margin-top:5px; margin-left:10px; margin-bottom:15px;">
-                <button id="writes-collapse" class="undecorated-button" style="width:18px; height:16px;">
-                    <img id="writes-collapse-image" src="{{ url_for('static', filename='images/expand.svg') }}"
-                        style="margin-left:-6px;margin-top:-2px;" width="14" height="14"></img>
-                </button>
-                <label id="writes-label" class="truncate-label" style="margin-left:-5px">Datalake Writes (count)<label>
-            </div>
-            <div id="writes-container"
-                style="position:relative; height:180px; overflow:none;  font-family: sans-serif; font-size: 12px; padding:5px;">
-            </div>
             <div
                 style="position:relative; height:20px; font-size:12px; margin-top:5px; margin-left:10px; margin-bottom:15px;">
                 <button id="throughput-collapse" class="undecorated-button" style="width:18px; height:16px;">
