@@ -34,7 +34,7 @@ class BarChart {
 
             var bar = document.createElement("div");
 
-            bar.style.width = "45px";
+            bar.style.width = "48px";
             bar.style.height = `0px`;
             bar.style.maxHeight = `160px`;
             bar.style.margin = `0 3px`;
