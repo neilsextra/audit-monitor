@@ -131,7 +131,7 @@ async function updateStatus() {
     barchartWrites.draw(counters.puts, currentHour, "#008080", "#ccffff", 0);
     barchartThroughput.draw(counters.throughput, currentHour, "#008080", "#ccffff", 2);
   
-    barchartExecutes.draw(counters.transactions, currentHour, "#008080", "#ccffff", 0);
+    barchartExecutes.draw(counters.requests, currentHour, "#008080", "#ccffff", 0);
     barchartExecuteTimes.draw(counters.throughput, currentHour, "#008080", "#ccffff", 0);
 
     document.getElementById("writes-label").innerHTML =
@@ -289,9 +289,10 @@ window.onload = async function () {
                 document.getElementById("page-size").value
             );
 
-            updateStatus();
+            window.setTimeout(function () {
+                 updateStatus();
+            }, 1000);
 
-            document.getElementById("")
             document.getElementById("wait-dialog").close();
             document.getElementById("execute-dialog").close();
 
@@ -305,6 +306,10 @@ window.onload = async function () {
 
             document.getElementById("wait-dialog").close();
             showError(exception.message);
+
+            window.setTimeout(function () {
+                 updateStatus();
+            }, 1000);
 
         }
 
