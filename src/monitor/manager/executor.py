@@ -19,6 +19,8 @@ class Executor:
     def processor(self, worker_id: int, monitor:object, task_queue: queue.Queue):
         monitor.message(f"[{worker_id}] worker - started processing...")
 
+        batch = []
+        
         while True:
             try:
                 request = task_queue.get(timeout=1000)
