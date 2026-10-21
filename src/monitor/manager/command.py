@@ -73,10 +73,6 @@ class Command:
         refresh_token = credential["tokens"]["refresh_token"]
         token_endpoint = credential["urls"]["token_endpoint"]
 
-        print(f"refresh_token: {refresh_token}")
-        print(f"token_endpoint: {token_endpoint}")
-        print(f"Client: {client} : {secret}")
-
         session = self.get_session()
     
         headers = {"content-type": "application/x-www-form-urlencoded"}
@@ -116,8 +112,6 @@ class Command:
         payload = {"dn": dn, "start":0, "size": 25}
    
         response = session.post(url_base + Command.HISTORY_URL + "?size=100", data=json.dumps(payload), headers=headers, verify=False)
- 
-        print(response.text)
 
         return { "status_code" : response.status_code,
                  "reason" : response.reason,
@@ -152,8 +146,6 @@ class Command:
             params = {"startIndex": start, "size":size, "sortOrder":"asc" , "operator": "GT", "creationTime":creation_time, "sortField":"CREATION_TIME"}
 
         response = session.get(url_base + Command.REQUEST_LIST_URL, params=params, headers=headers, verify=False)
-
-        print(f"{json.dumps(response.text)}")
  
         if response.status_code not in(200, 201):
             self.logger.info(f"[command] - error {response.status_code} - {response.reason} - {response.text}")
@@ -163,13 +155,11 @@ class Command:
                             "response": response.text
                     }
 
-        processes = json.loads(response.text)["processInfoNodeList"]
-        process_count = len(json.loads(response.text)["processInfoNodeList"])
-
+        requests_count = len(json.loads(response.text)["processInfoNodeList"])
 
         return { "status_code" : response.status_code,
                  "reason" : response.reason,
                  "response": json.dumps(response.text),
-                 "processes": processes,
-                 "returned": process_count
+                 "requests": json.loads(response.text)["processInfoNodeList"],
+                 "returned": requests_count
         }
