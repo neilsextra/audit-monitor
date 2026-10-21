@@ -1,6 +1,7 @@
 import queue
 import threading
 import json
+import time
 
 class Executor:
     CONFIGURATION_ROW = "$"
@@ -15,35 +16,34 @@ class Executor:
     def set_logger(self, logger):
          self.logger = logger
             
-    def worker(worker_id: int, monitor:object, task_queue: queue.Queue):
-        monitor.logger.message(f"[Worker {worker_id}] Started processing...")
+    def processor(self, worker_id: int, monitor:object, task_queue: queue.Queue):
+        monitor.message(f"[{worker_id}] Worker - started processing...")
 
         while True:
             try:
-                 request = task_queue.get(timeout=1)
+                request = task_queue.get(timeout=1)
 
-                 if (request == "close"):
-                     monitor.logger.message(f"[Worker {worker_id}] shutdown commencing...")
-                     break
-                     
+                time.sleep(1000)  
+                if (request == "close"):
+                    monitor.message(f"[{worker_id}] Worker - shutdown commencing...")
+                    break
+                    
             except queue.Empty:
                 continue
       
-        monitor.logger.message(f"[Worker {worker_id}] shutdown")
+        monitor.logger.message(f"[{worker_id}] Worker - shutdown")
         task_queue.task_done()
 
     def execute(self, parameters):
         task_queue = queue.Queue()
 
         num_worker_threads = parameters["threads"]
+
+        self.monitor.message(f'[execution] - started - threads={num_worker_threads}')
         
         for worker in range(num_worker_threads):
-            thread = threading.Thread(target=worker, args=(worker, task_queue), daemon=True)
+            thread = threading.Thread(target=self.processor, args=(worker, self.monitor, task_queue), daemon=True)
             thread.start()
-
-        self.monitor.message(f'[execution] - started')
-
-        self.logger.info(json.dumps(parameters))
 
         status = self.storage.get_row(parameters["datalake_url"],  
                                         parameters["datalake_userid"], 
