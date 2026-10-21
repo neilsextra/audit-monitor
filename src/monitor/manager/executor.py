@@ -1,7 +1,7 @@
 import queue
 import threading
 import json
-import time
+from manager.monitor import Monitor
 
 class Executor:
     CONFIGURATION_ROW = "$"
@@ -14,36 +14,38 @@ class Executor:
         self.storage = storage
          
     def set_logger(self, logger):
-         self.logger = logger
-            
+        self.logger = logger
+
     def processor(self, worker_id: int, monitor:object, task_queue: queue.Queue):
         monitor.message(f"[{worker_id}] Worker - started processing...")
 
         while True:
             try:
-                request = task_queue.get(timeout=1)
-
-                time.sleep(1000)  
+                request = task_queue.get(timeout=1000)
+                monitor.add_counter(Monitor.THROUGHPUT, len(request))
+   
                 if (request == "close"):
-                    monitor.message(f"[{worker_id}] Worker - shutdown commencing...")
+                    monitor.message(f"[{worker_id}] worker - shutdown commencing...")
                     break
                     
             except queue.Empty:
                 continue
       
-        monitor.logger.message(f"[{worker_id}] Worker - shutdown")
+        monitor.message(f"[{worker_id}] Worker - shutdown")
         task_queue.task_done()
 
-    def execute(self, parameters):
+    def task(self, logger,  monitor, parameters):
         task_queue = queue.Queue()
+        threads = []
 
         num_worker_threads = parameters["threads"]
 
         self.monitor.message(f'[execution] - started - threads={num_worker_threads}')
         
         for worker in range(num_worker_threads):
-            thread = threading.Thread(target=self.processor, args=(worker, self.monitor, task_queue), daemon=True)
+            thread = threading.Thread(target=self.processor, args=(worker, monitor, task_queue), daemon=True)
             thread.start()
+            threads.append(thread)
 
         status = self.storage.get_row(parameters["datalake_url"],  
                                         parameters["datalake_userid"], 
@@ -52,20 +54,17 @@ class Executor:
                                         parameters["host_name"],
                                         Executor.CONFIGURATION_ROW)
 
-        print(json.dumps(parameters))
-
+ 
         checkpoint = None
         tokens = None
  
         for column in status:
-            print(column["col"])
 
             if column["col"] == "json:checkpoint":
                 print(f"Checkpoijnt: {json.dumps(column)}")
                 checkpoint =  json.loads(column["val"])["time"]
             if column["col"] == "json:service":
                 rest_service = json.loads(column["val"])
-                print(json.dumps(rest_service))
                 credential = {
                             "tokens" : rest_service["control"]["tokens"],
                             "urls": rest_service["control"]["urls"]
@@ -76,7 +75,6 @@ class Executor:
         start = 0
         total = 0
         returned = 0
-        requests = []
 
         while True:  
             response = self.command.retrieve_requests(parameters["identity_url"], 
@@ -87,18 +85,34 @@ class Executor:
             total += returned
             start += parameters["page_size"]
 
-            print(f"Next: {returned} - {total} - {start}")
+            self.monitor.message(f"[retrieve]:  ({response["status_code"]}) - {parameters["page_size"]} - {returned} - {total} - {len(response["requests"])}")
 
-            self.monitor.message(f"[retrieve]:  ({response["status_code"]}) - {parameters["page_size"]} - {returned} - {total}")
-
-            self.monitor.inc_counter("requests")
+            self.monitor.add_counter(Monitor.REQUESTS, returned)
+    
+            for request in response["requests"]:
+                task_queue.put(json.dumps(request))
         
             if returned != parameters["page_size"]: 
                 break
         
-        for worker in range(num_worker_threads):
-            task_queue.put(f"close")
+            for worker in range(num_worker_threads):
+                task_queue.put(f"close")
 
-        response = {
-            "status_code" : 200
+        self.monitor.message(f"[retrieve]: task waiting on thread join")
+        
+        for thread in threads:
+            thread.join()
+
+        self.monitor.message(f"[retrieve]: task completed")        
+
+    def execute(self, parameters):
+        
+        thread = threading.Thread(target=self.task, args=(self.logger,  self.monitor, parameters), daemon=True)
+        
+        self.monitor.message(f"[execute]:  task thread: '{thread.name}'")
+        thread.start()
+
+        return { 
+            "status_code" : 200, 
+            "response": f"task: {thread.ident}"
         }
