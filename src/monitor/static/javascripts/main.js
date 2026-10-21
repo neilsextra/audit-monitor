@@ -269,11 +269,10 @@ window.onload = async function () {
     document.getElementById("ok-execute-dialog").addEventListener('click', async (e) => {
 
         try {
-            document.getElementById("wait-dialog").showModal();
-
+ 
             var message = new Message();
 
-            var response = await message.execute(
+            message.execute(
                 document.getElementById("datalake-url").value,
                 document.getElementById("datalake-namespace").value,
                 document.getElementById("datalake-userid").value,
@@ -293,7 +292,6 @@ window.onload = async function () {
                  updateStatus();
             }, 1000);
 
-            document.getElementById("wait-dialog").close();
             document.getElementById("execute-dialog").close();
 
         } catch (exception) {
