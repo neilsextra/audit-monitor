@@ -66,44 +66,40 @@ class Command:
             "status_code" : response.status_code,
             "tokens" : tokens, 
             "userid": userid,
-            "clientid": clientid,
-            "secret": secret,
             "urls" : urls}
 
-    def refresh_token(self, credential):
+    def refresh_token(self, client, secret, credential):
+
+        refresh_token = credential["tokens"]["refresh_token"]
+        token_endpoint = credential["urls"]["token_endpoint"]
+
+        print(f"refresh_token: {refresh_token}")
+        print(f"token_endpoint: {token_endpoint}")
+        print(f"Client: {client} : {secret}")
 
         session = self.get_session()
-            
-        artifacts = json.loads(credential)
     
         headers = {"content-type": "application/x-www-form-urlencoded"}
-        payload = {"grant_type": "refresh_token", "refresh_token": artifacts["tokens"]["refresh_token"]}
+        payload = {"grant_type": "refresh_token", "refresh_token": refresh_token}
 
-        response = session.post(artifacts["urls"]["token_endpoint"], headers=headers, data=payload, verify=False, auth=(artifacts["clientid"], 
-                                                                                                                        artifacts["secret"]))
-
-        self.monitor.message("Command: token refreshed") 
-
-        return artifacts["url"], json.loads(response.text)
+        response = session.post(token_endpoint, headers=headers, data=payload, verify=False, auth=(client, secret))
+ 
+        return token_endpoint, json.loads(response.text)
 
     def logoff(self, session, token):
         urls = self.get_urls
         headers = {"Authorization": token['token_type'] + " " + token["access_token"], "Content-Type": "application/json"}
         response = session.post(urls[Command.REVOCATION_ENDPOINT], headers=headers,  verify=False)
 
-    def get_dn(self, credential, dn:str):
+    def get_dn(self, url_base, client, secret, credential, dn:str):
  
-        url, token = self.refresh_token(credential)
+        url, token = self.refresh_token(client, secret, credential)
 
         headers = {"Authorization": token['token_type'] + " " + token["access_token"], "Content-Type": "application/json"}
         
         session = self.get_session()
-
-        url_base = str(url).split("?")[0]
        
         params = {"userDn": dn}
-
-        url_base = str(url).split("?")[0]
 
         response = session.get(url_base + Command.DN_DETAILS_URL, params=params, headers=headers, verify=False)
 
@@ -112,16 +108,13 @@ class Command:
                  "response": response.text
         }
 
-    def get_requests(self, credential:str, dn:str):
-
-        url, token = self.refresh_token(credential)
+    def get_requests(self, url_base:str, client:str, secret, credential, dn:str):
+        url, token = self.refresh_token(client, secret, credential)
 
         headers = {"Authorization": token["token_type"] + " " + token["access_token"], "Content-Type": "application/json"}
         session = self.get_session()        
         payload = {"dn": dn, "start":0, "size": 25}
-
-        url_base = str(url).split("?")[0]
-    
+   
         response = session.post(url_base + Command.HISTORY_URL + "?size=100", data=json.dumps(payload), headers=headers, verify=False)
  
         print(response.text)
@@ -131,15 +124,13 @@ class Command:
                  "response": json.dumps(response.text)
         }
     
-    def get_request_details(self, credential, id):
+    def get_request_details(self, url_base, client, secret, credential, id):
              
-        url, token = self.refresh_token(credential)
+        url, token = self.refresh_token(client, secret, credential)
 
         headers = {"Authorization": token['token_type'] + " " + token["access_token"], "Content-Type": "application/json"}
         session = self.get_session()
         payload = {"id": id, "entityType": "prd"}
-
-        url_base = str(url).split("?")[0]
 
         response = session.post(url_base + Command.REQUEST_DETAILS_URL, data=json.dumps(payload), headers=headers, verify=False)
 
@@ -148,34 +139,37 @@ class Command:
                  "response": response.text
         }
 
-    def retrieve_requests(self, credential:str, start:str, size:str, creation_time:str):
+    def retrieve_requests(self, url_base:str, client:str, secret:str, credential, start:str, size:str, creation_time:str):
 
-        url, token = self.refresh_token(credential)
+        url, token = self.refresh_token(client, secret, credential)
 
-        self.logger.info(f"[retrieve_requests] Index: '{start}' : '{size}' : '{creation_time}' : 'GT'")
- 
         headers = {"Authorization": token["token_type"] + " " + token["access_token"], "Content-Type": "application/json"}
 
         session = self.get_session()   
         params = {"startIndex":start, "size": size} 
 
         if creation_time != None:
-    
-            params = {"startIndex": "0", "size":"100", "sortOrder":"desc" , "operator": "GT", "creationTime":creation_time, "sortField":"CREATION_TIME"}
-         
-        url_base = str(url).split("?")[0]
+            params = {"startIndex": start, "size":size, "sortOrder":"asc" , "operator": "GT", "creationTime":creation_time, "sortField":"CREATION_TIME"}
 
-        self.logger.info(url_base + Command.REQUEST_LIST_URL)
-    
         response = session.get(url_base + Command.REQUEST_LIST_URL, params=params, headers=headers, verify=False)
-        self.logger.info(f"Retrieve_requests Requests: {response.status_code} : {response.text}")
+
+        print(f"{json.dumps(response.text)}")
+ 
+        if response.status_code not in(200, 201):
+            self.logger.info(f"[command] - error {response.status_code} - {response.reason} - {response.text}")
+            
+            return { "status_code" : response.status_code,
+                            "reason" : response.reason,
+                            "response": response.text
+                    }
+
+        processes = json.loads(response.text)["processInfoNodeList"]
+        process_count = len(json.loads(response.text)["processInfoNodeList"])
+
 
         return { "status_code" : response.status_code,
                  "reason" : response.reason,
-                 "response": response.text
+                 "response": json.dumps(response.text),
+                 "processes": processes,
+                 "returned": process_count
         }
-    
-    
-    def search_users(self, credential, field, argument, size):
-    
-        return self.search_fields(credential, field, argument, size)
