@@ -17,7 +17,7 @@ class Executor:
         self.logger = logger
 
     def processor(self, worker_id: int, monitor:object, task_queue: queue.Queue):
-        monitor.message(f"[{worker_id}] Worker - started processing...")
+        monitor.message(f"[{worker_id}] worker - started processing...")
 
         while True:
             try:
@@ -31,7 +31,7 @@ class Executor:
             except queue.Empty:
                 continue
       
-        monitor.message(f"[{worker_id}] Worker - shutdown")
+        monitor.message(f"[{worker_id}] worker - shutdown")
         task_queue.task_done()
 
     def task(self, logger,  monitor, parameters):
