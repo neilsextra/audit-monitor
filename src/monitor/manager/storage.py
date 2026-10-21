@@ -1,6 +1,7 @@
 import base64
 import json
 import requests
+from manager.monitor import Monitor
 
 class Storage:
 
@@ -45,8 +46,6 @@ class Storage:
         full_table_name = f"{name_space}:{table_name}"
  
         url = f"{base_url}/{full_table_name}/schema"    
-
-        self.logger.info(f"URL: {url} - {userid}/{password}")
         
         schema = {
             "ColumnSchema": [
@@ -70,8 +69,6 @@ class Storage:
 
     def drop_table(self, base_url:str, name_space:str, userid:str, password:str, table_name:str):
 
-        self.logger.info(f"[drop] URL: {base_url} - {userid}/{password}")
-
         full_table_name = f"{name_space}:{table_name}"
         
         url = f"{base_url}/{full_table_name}/schema"    
@@ -89,8 +86,6 @@ class Storage:
 
     def put_row(self, base_url:str,  name_space:str, userid:str, password:str,table_name:str, row_key: str, column_family:str, column_qualifier:str, value:str):
         url = f"{base_url}/{name_space}:{table_name}/{row_key}" 
-
-        self.logger.info(f"[put_row] URL: {url} - {userid}/{password}")
  
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
  
@@ -112,7 +107,7 @@ class Storage:
         
         if int(response.status_code) == 200:
             print(f"Successfully inserted row '{row_key}'.")
-            self.monitor.inc_counter("puts")
+            self.monitor.inc_counter(Monitor.PUTS)
         else:
             print(f"Failed to insert data: {response.status_code} - {response.text}")
  
@@ -143,7 +138,7 @@ class Storage:
          response = requests.put(url, headers=headers, auth=(userid, password),  json=payload, verify=False)
         
          if int(response.status_code) == 200:
-            self.monitor.add_counter("puts", len(rows))
+            self.monitor.add_counter(Counter.PUTS, len(rows))
             print(f"Successfully inserted rows: {len(rows)}")
          else:
              print(f"Failed to insert rows: {response.status_code} - {response.text}")
@@ -170,8 +165,7 @@ class Storage:
                         "col": col,
                         "val": val
                     })
-
-                    print(f"Column: {col} | Value: {val}")
+                    
         else:
             print(f"Row not found or error: {response.status_code}")
 
