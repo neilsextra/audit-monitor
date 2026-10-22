@@ -36,7 +36,7 @@ class Executor:
                 print(process)
                 batch.append(process)
                 
-                print(f"requestId: {process['requestId']} - creationTime: {process['creationTime']}")
+                self.monitor.message(f"[{worker_id}] - {process['requestId']} - {process['creationTime']}")
 
                 if (len(batch) == parameters["batch_size"]):
                     print("batch added")
@@ -108,8 +108,8 @@ class Executor:
             if returned != parameters["page_size"]: 
                 break
         
-            for worker in range(num_worker_threads):
-                task_queue.put(f"close")
+        for worker in range(num_worker_threads):
+            task_queue.put(f"close")
 
         self.monitor.message(f"[retrieve]: task waiting on thread join")
         
