@@ -16,24 +16,36 @@ class Executor:
     def set_logger(self, logger):
         self.logger = logger
 
-    def processor(self, worker_id: int, monitor:object, task_queue: queue.Queue):
-        monitor.message(f"[{worker_id}] worker - started processing...")
+    def processor(self, worker_id: int, parameters:object,task_queue: queue.Queue):
+        self.monitor.message(f"[{worker_id}] worker - started processing...")
 
         batch = []
-        
+
         while True:
             try:
                 request = task_queue.get(timeout=1000)
-                monitor.add_counter(Monitor.THROUGHPUT, len(request))
-   
+          
                 if (request == "close"):
-                    monitor.message(f"[{worker_id}] worker - shutdown commencing...")
+                    self.monitor.message(f"[{worker_id}] worker - shutdown commencing...")
                     break
-                    
+
+                self.monitor.add_counter(Monitor.THROUGHPUT, len(request))
+
+                process = json.loads(request)
+
+                print(process)
+                batch.append(process)
+                
+                print(f"requestId: {process['requestId']} - creationTime: {process['creationTime']}")
+
+                if (len(batch) == parameters["batch_size"]):
+                    print("batch added")
+
             except queue.Empty:
                 continue
       
-        monitor.message(f"[{worker_id}] worker - shutdown")
+        self.monitor.message(f"[{worker_id}] worker - shutdown")
+
         task_queue.task_done()
 
     def task(self, logger,  monitor, parameters):
@@ -45,7 +57,7 @@ class Executor:
         self.monitor.message(f'[execution] - started - threads={num_worker_threads}')
         
         for worker in range(num_worker_threads):
-            thread = threading.Thread(target=self.processor, args=(worker, monitor, task_queue), daemon=True)
+            thread = threading.Thread(target=self.processor, args=(worker, parameters, task_queue), daemon=True)
             thread.start()
             threads.append(thread)
 
@@ -63,7 +75,6 @@ class Executor:
         for column in status:
 
             if column["col"] == "json:checkpoint":
-                print(f"Checkpoijnt: {json.dumps(column)}")
                 checkpoint =  json.loads(column["val"])["time"]
             if column["col"] == "json:service":
                 rest_service = json.loads(column["val"])
