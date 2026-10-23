@@ -1,6 +1,8 @@
 import queue
 import threading
 import json
+import time
+
 from manager.monitor import Monitor
 
 class Executor:
@@ -16,34 +18,68 @@ class Executor:
     def set_logger(self, logger):
         self.logger = logger
 
-    def processor(self, worker_id: int, parameters:object,task_queue: queue.Queue):
+    def processor(self, worker_id: int, parameters:object, task_queue: queue.Queue):
         self.monitor.message(f"[{worker_id}] worker - started processing...")
 
-        batch = []
+        rows = []
+        start_timer = 0
 
         while True:
             try:
+                start_timer = time.perf_counter()
+                
                 request = task_queue.get(timeout=1000)
           
                 if (request == "close"):
                     self.monitor.message(f"[{worker_id}] worker - shutdown commencing...")
                     break
 
-                self.monitor.add_counter(Monitor.THROUGHPUT, len(request))
-
                 process = json.loads(request)
 
-                print(process)
-                batch.append(process)
+                rows.append({
+                    "row_key": process['requestId'],
+                    "cell": [ 
+                        {
+                            "column": {
+                                "family": "json",
+                                "qualifier": "summary",
+                                "value": json.dumps(process)
+                            }
+                        }
+                        
+                    ]
+                })
                 
                 self.monitor.message(f"[{worker_id}] - {process['requestId']} - {process['creationTime']}")
 
-                if (len(batch) == parameters["batch_size"]):
-                    print("batch added")
+                
+                if (len(rows) == parameters["batch_size"]):
+                    self.storage.bulk_put_row(parameters["datalake_url"], 
+                            parameters["datalake_namespace"],
+                            parameters["host_name"],
+                            parameters["datalake_userid"],
+                            parameters["datalake_password"],
+                            rows
+                    )
 
+                self.monitor.add_counter(Monitor.THROUGHPUT, len(json.dumps(rows)))
+                self.monitor.add_counter(Monitor.TIMES, (time.perf_counter() - start_timer) * 1000)
             except queue.Empty:
                 continue
-      
+
+              
+        if len(rows) > 0:
+            self.storage.bulk_put_row(parameters["datalake_url"], 
+                            parameters["datalake_namespace"],
+                            parameters["host_name"],
+                            parameters["datalake_userid"],
+                            parameters["datalake_password"],
+                            rows
+                    )
+            
+            self.monitor.add_counter(Monitor.THROUGHPUT, len(json.dumps(rows)))
+            self.monitor.add_counter(Monitor.TIMES, (time.perf_counter() - start_timer) * 1000)           
+
         self.monitor.message(f"[{worker_id}] worker - shutdown")
 
         task_queue.task_done()
