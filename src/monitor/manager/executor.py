@@ -65,8 +65,6 @@ class Executor:
                     ]
                 })
                 
-                self.monitor.message(f"[{worker_id}] - {process['requestId']} - {process['creationTime']}")
-
                 if (len(rows) == parameters["batch_size"]):
                     self.storage.bulk_put_row(parameters["datalake_url"], 
                             parameters["datalake_namespace"],
@@ -77,7 +75,7 @@ class Executor:
                     )
 
                 self.checkpointer.checkpoint(parameters, int(process['creationTime']))
-                
+
                 self.monitor.add_counter(Monitor.THROUGHPUT, len(json.dumps(rows)))
                 self.monitor.add_counter(Monitor.TIMES, (time.perf_counter() - start_timer) * 1000)
 
