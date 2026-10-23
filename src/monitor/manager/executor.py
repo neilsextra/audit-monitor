@@ -18,7 +18,7 @@ class Executor:
     def set_logger(self, logger):
         self.logger = logger
 
-    def processor(self, worker_id: int, parameters:object, task_queue: queue.Queue):
+    def processor(self, worker_id: int, parameters:object, credential:object, task_queue: queue.Queue):
         self.monitor.message(f"[{worker_id}] worker - started processing...")
 
         rows = []
@@ -36,6 +36,13 @@ class Executor:
 
                 process = json.loads(request)
 
+                response = self.command.get_request_details(parameters["identity_url"], 
+                                                            parameters["identity_client"],
+                                                            parameters["identity_secret"], 
+                                                            credential, 
+                                                            process['requestId'])
+                                
+
                 rows.append({
                     "row_key": process['requestId'],
                     "cell": [ 
@@ -52,7 +59,6 @@ class Executor:
                 
                 self.monitor.message(f"[{worker_id}] - {process['requestId']} - {process['creationTime']}")
 
-                
                 if (len(rows) == parameters["batch_size"]):
                     self.storage.bulk_put_row(parameters["datalake_url"], 
                             parameters["datalake_namespace"],
@@ -90,13 +96,6 @@ class Executor:
 
         num_worker_threads = parameters["threads"]
 
-        self.monitor.message(f'[execution] - started - threads={num_worker_threads}')
-        
-        for worker in range(num_worker_threads):
-            thread = threading.Thread(target=self.processor, args=(worker, parameters, task_queue), daemon=True)
-            thread.start()
-            threads.append(thread)
-
         status = self.storage.get_row(parameters["datalake_url"],  
                                         parameters["datalake_userid"], 
                                         parameters["datalake_password"], 
@@ -119,6 +118,13 @@ class Executor:
                             "urls": rest_service["control"]["urls"]
                         }
 
+        self.monitor.message(f'[execution] - started - threads={num_worker_threads}')
+            
+        for worker in range(num_worker_threads):
+            thread = threading.Thread(target=self.processor, args=(worker, parameters, credential, task_queue), daemon=True)
+            thread.start()
+            threads.append(thread)
+
         print(f"Checkpoint/Page Size: {checkpoint} - {parameters['page_size']}")
 
         start = 0
@@ -127,9 +133,11 @@ class Executor:
 
         while True:  
             response = self.command.retrieve_requests(parameters["identity_url"], 
-                                                    parameters["identity_client"], parameters["identity_secret"], 
+                                                    parameters["identity_client"], 
+                                                    parameters["identity_secret"], 
                                                     credential, 
-                                                    start, parameters["page_size"], checkpoint)
+                                                    start, parameters["page_size"], 
+                                                    checkpoint)
             returned = response["returned"]
             total += returned
             start += parameters["page_size"]
