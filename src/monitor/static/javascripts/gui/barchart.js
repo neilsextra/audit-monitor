@@ -26,15 +26,15 @@ class BarChart {
             var title = document.createElement("label");
             var label = document.createElement("label");
 
-            label.style = "overflow: hidden; margin-top: 2px; text-overflow: ellipsis white-space: nowrap; width:30px; text-align: center";
-            title.style = "overflow: hidden; text-overflow: ellipsis white-space: nowrap; width:30px; text-align: center";
+            label.style = "display:block; overflow: hidden; margin-top: 2px; text-overflow: ellipsis white-space: nowrap; width:57px; text-align: center";
+            title.style = "display:block; overflow: hidden; text-overflow: ellipsis white-space: nowrap; width:57px; text-align: center";
 
             title.innerHTML = "0";
             label.innerHTML = `${iItem}`;
 
             var bar = document.createElement("div");
 
-            bar.style.width = "30px";
+            bar.style.width = "47px";
             bar.style.height = `0px`;
             bar.style.maxHeight = `160px`;
             bar.style.margin = `0 3px`;
