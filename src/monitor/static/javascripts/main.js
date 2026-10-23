@@ -5,10 +5,9 @@ var userList = [];
 var entryList = [];
 var rows = [];
 
-var barchartWrites = null;
 var barchartThroughput = null;
-var barchartExecutes = null;
-var barchartExecuteTimes = null;
+var barchartRequests = null;
+var barchartExecuteTime = null;
 
 function convert(date) {
     const dateObj = new Date(date);
@@ -120,30 +119,24 @@ async function updateStatus() {
     var counters = response.response.counters;
     var currentHour = new Date(Date.now()).getHours();
 
-    console.log(JSON.stringify(counters));
-
-    barchartWrites.setOptimumScale(counters.puts);
     barchartThroughput.setOptimumScale(counters.throughput);
  
-    barchartExecutes.setOptimumScale(counters.requests);
-    barchartExecuteTimes.setOptimumScale(counters.transactions);
+    barchartRequests.setOptimumScale(counters.requests);
+    barchartExecuteTime.setOptimumScale(counters.times);
 
-    barchartWrites.draw(counters.puts, currentHour, "#008080", "#ccffff", 0);
     barchartThroughput.draw(counters.throughput, currentHour, "#008080", "#ccffff", 2);
   
-    barchartExecutes.draw(counters.requests, currentHour, "#008080", "#ccffff", 0);
-    barchartExecuteTimes.draw(counters.throughput, currentHour, "#008080", "#ccffff", 0);
+    barchartRequests.draw(counters.requests, currentHour, "#008080", "#ccffff", 0);
+    barchartExecuteTime.draw(counters.times, currentHour, "#008080", "#ccffff", 0);
 
-    document.getElementById("writes-label").innerHTML =
-        `Writes Datalake (Units : ${barchartWrites.precision}) - ${Math.trunc(counters.puts[currentHour] / barchartWrites.precision)}`;
     document.getElementById("throughput-label").innerHTML =
         `Throughput Datalake (Units : ${barchartThroughput.precision}) - ${Math.trunc(counters.throughput[currentHour] / barchartThroughput.precision)}`;
 
     document.getElementById("executes-label").innerHTML =
-        `Execution (Units : ${barchartExecutes.precision}) - ${Math.trunc(counters.requests[currentHour] / barchartExecutes.precision)}`;
+        `Request Returned (Units : ${barchartRequests.precision}) - ${Math.trunc(counters.requests[currentHour] / barchartRequests.precision)}`;
 
     document.getElementById("execute-times-label").innerHTML =
-        `Execution Times (Units : ${barchartExecuteTimes.precision}) - ${Math.trunc(counters.transactions[currentHour] / barchartExecuteTimes.precision)}`;
+        `Execution Time (Units : ${barchartExecuteTime.precision}) - ${Math.trunc(counters.times[currentHour] / barchartExecuteTime.precision)}`;
 
 }
 
@@ -351,14 +344,12 @@ window.onload = async function () {
 
     });
 
-    barchartWrites = new BarChart("writes-container", 24);
     barchartThroughput = new BarChart("throughput-container", 24);
-    barchartExecutes = new BarChart("executes-container", 24);
-    barchartExecuteTimes = new BarChart("execute-times-container", 24);
+    barchartRequests = new BarChart("executes-container", 24);
+    barchartExecuteTime = new BarChart("execute-times-container", 24);
 
     var panelView = new PanelView("static/images/expand.svg", "static/images/contract.svg");
 
-    panelView.decorate("writes-collapse", "writes-collapse-image", "writes-container", true);
     panelView.decorate("throughput-collapse", "throughput-collapse-image", "throughput-container", true);
     panelView.decorate("executes-collapse", "executes-collapse-image", "executes-container", true);
     panelView.decorate("execute-times-collapse", "execute-times-collapse-image", "execute-times-container", true);
