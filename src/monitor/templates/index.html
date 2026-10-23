@@ -151,9 +151,10 @@
         </div>
 
         <div style="position:absolute; top:100px; left:120px; right:10px; bottom:60px;">
-            <div class="execution-options"  style="border: 1px solid rgba(0, 0, 0, 0.2);" >
+            <div class="execution-options" style="border: 1px solid rgba(0, 0, 0, 0.2);">
                 <div class="execution-option" style="display:block; width:550px; height:40px;">
-                    <label for="thread-count" style="display:inline-block; width:80px; font-size:14px; font-weight:bold; margin-left:20px;"
+                    <label for="thread-count"
+                        style="display:inline-block; width:80px; font-size:14px; font-weight:bold; margin-left:20px;"
                         class="field">Threads:</label>
                     <input type="range" id="thread-count" name="limit" min="10" max="100" value="10" step="10"
                         list="thread-tickmarks" style="width:340px; left:80px;"></input>
@@ -173,8 +174,7 @@
                         <option value="100"></option>
                     </datalist>
 
-                    <div class="slider-labels"
-                        style="display:block; margin-left:100px; top:18px; width:460px;">
+                    <div class="slider-labels" style="display:block; margin-left:100px; top:18px; width:460px;">
                         <span class="slider-tick-label">10</span>
                         <span class="slider-tick-label">&nbsp;20</span>
                         <span class="slider-tick-label">&nbsp;30</span>
@@ -189,7 +189,8 @@
                 </div>
 
                 <div class="execution-option" style="height:40px; width:550px;">
-                    <label for="batch-size" style="display:inline-block; width:80px; font-size:14px; font-weight:bold; margin-left:20px;"
+                    <label for="batch-size"
+                        style="display:inline-block; width:80px; font-size:14px; font-weight:bold; margin-left:20px;"
                         class="field">Batch:</label>
                     <input type="range" id="batch-size" name="limit" min="10" max="100" value="10" step="10"
                         list="batch-tickmarks" style="width:340px; left:80px;"></input>
@@ -209,8 +210,7 @@
                         <option value="100"></option>
                     </datalist>
 
-                    <div class="slider-labels"
-                        style="display:block; margin-left:100px; top:18px; width:460px;">
+                    <div class="slider-labels" style="display:block; margin-left:100px; top:18px; width:460px;">
                         <span class="slider-tick-label">10</span>
                         <span class="slider-tick-label">&nbsp;20</span>
                         <span class="slider-tick-label">&nbsp;30</span>
@@ -225,7 +225,8 @@
                 </div>
 
                 <div class="execution-option" style="width:550px; height:40px;">
-                    <label for="checkpoint-count" style="display:inline-block; width:80px; font-size:14px; font-weight:bold; margin-left:20px;"
+                    <label for="checkpoint-count"
+                        style="display:inline-block; width:80px; font-size:14px; font-weight:bold; margin-left:20px;"
                         class="field">Checkpoint:</label>
                     <input type="range" id="checkpoint-count" name="limit" min="100" max="1000" value="100" step="100"
                         list="checkpoint-tickmarks" style="width:340px; left:80px;"></input>
@@ -245,8 +246,7 @@
                         <option value="1000"></option>
                     </datalist>
 
-                    <div class="slider-labels"                       
-                        style="display:block; margin-left:100px; top:18px; width:460px;">
+                    <div class="slider-labels" style="display:block; margin-left:100px; top:18px; width:460px;">
                         <span class="slider-tick-label" style="margin-right:4px;">100</span>
                         <span class="slider-tick-label" style="margin-right:10px;">200</span>
                         <span class="slider-tick-label" style="margin-right:10px;">300</span>
@@ -261,7 +261,8 @@
                 </div>
 
                 <div class="execution-option" style="width:550px; height:60px;">
-                    <label for="page-size" style="display:inline-block; width:80px; font-size:14px; font-weight:bold; margin-left:20px;"
+                    <label for="page-size"
+                        style="display:inline-block; width:80px; font-size:14px; font-weight:bold; margin-left:20px;"
                         class="field">Page Size:</label>
                     <input type="range" id="page-size" name=" limit" min="100" max="1000" value="100" step="100"
                         list="page-size-tickmarks" style="top:-2px; width:340px; left:100px;"></input>
@@ -281,8 +282,7 @@
                         <option value="1000"></option>
                     </datalist>
 
-                    <div class="slider-labels" 
-                        style="display:block; margin-left:100px; top:18px; width:460px;">
+                    <div class="slider-labels" style="display:block; margin-left:100px; top:18px; width:460px;">
                         <span class="slider-tick-label" style="margin-right:4px;">100</span>
                         <span class="slider-tick-label" style="margin-right:10px;">200</span>
                         <span class="slider-tick-label" style="margin-right:10px;">300</span>
@@ -341,17 +341,6 @@
         <div id="containers" style="position:absolute; top:5px; left:5px; right:5px; bottom:5px; overflow:auto;">
             <div
                 style="position:relative; height:20px; font-size:12px; margin-top:5px; margin-left:10px; margin-bottom:15px;">
-                <button id="writes-collapse" class="undecorated-button" style="width:18px; height:16px;">
-                    <img id="writes-collapse-image" src="{{ url_for('static', filename='images/expand.svg') }}"
-                        style="margin-left:-6px;margin-top:-2px;" width="14" height="14"></img>
-                </button>
-                <label id="writes-label" class="truncate-label" style="margin-left:-5px">Datalake Writes (count)<label>
-            </div>
-            <div id="writes-container"
-                style="position:relative; height:180px; overflow:none;  font-family: sans-serif; font-size: 12px; padding:5px;">
-            </div>
-            <div
-                style="position:relative; height:20px; font-size:12px; margin-top:5px; margin-left:10px; margin-bottom:15px;">
                 <button id="throughput-collapse" class="undecorated-button" style="width:18px; height:16px;">
                     <img id="throughput-collapse-image" src="{{ url_for('static', filename='images/expand.svg') }}"
                         style="margin-left:-6px;margin-top:-2px;" width="14" height="14"></img>
@@ -369,7 +358,7 @@
                     <img id="executes-collapse-image" src="{{ url_for('static', filename='images/expand.svg') }}"
                         style="margin-left:-6px;margin-top:-2px;" width="14" height="14"></img>
                 </button>
-                <label id="executes-label" class="truncate-label" style="margin-left:-5px">Execution Counts
+                <label id="executes-label" class="truncate-label" style="margin-left:-5px">Requests Returned
                     (count)<label>
             </div>
 
