@@ -10,11 +10,12 @@ class Executor:
     CHECKPOINT_COLUMN = "json:checkpoint"
     TOKENS_COLUMN = "json:tokens"
  
-    def __init__(self, monitor, command, storage) -> None:
+    def __init__(self, monitor, command, storage, checkpointer) -> None:
         self.monitor = monitor
         self.command = command
         self.storage = storage
-         
+        self.checkpointer = checkpointer
+          
     def set_logger(self, logger):
         self.logger = logger
 
@@ -42,7 +43,8 @@ class Executor:
                                                             credential, 
                                                             process['requestId'])
                                 
-
+                history = json.loads(request)
+                
                 rows.append({
                     "row_key": process['requestId'],
                     "cell": [ 
@@ -52,8 +54,14 @@ class Executor:
                                 "qualifier": "summary",
                                 "value": json.dumps(process)
                             }
-                        }
-                        
+                        },
+                        {
+                        "column": {
+                                "family": "json",
+                                "qualifier": "summary",
+                                "value": json.dumps(history)
+                            }
+                        }      
                     ]
                 })
                 
@@ -68,8 +76,11 @@ class Executor:
                             rows
                     )
 
+                self.checkpointer.checkpoint(parameters, int(process['creationTime']))
+                
                 self.monitor.add_counter(Monitor.THROUGHPUT, len(json.dumps(rows)))
                 self.monitor.add_counter(Monitor.TIMES, (time.perf_counter() - start_timer) * 1000)
+
             except queue.Empty:
                 continue
 
