@@ -3,7 +3,11 @@ import threading
 import time
 
 class Monitor:
-
+    TIMES ="times" 
+    REQUESTS = "requests"
+    THROUGHPUT = "throughput" 
+    PUTS = "puts" 
+   
     def __init__(self) -> None:
         print(f"Monitor - [__init__] - started ...")
 
@@ -13,10 +17,10 @@ class Monitor:
 
         self.counters = {}
 
-        self.counters["requests"]  = [0] * 24
-        self.counters["transactions"]  = [0] * 24
-        self.counters["throughput"]  = [0] * 24
-        self.counters["puts"]  = [0] * 24
+        self.counters[Monitor.TIMES]  = [0] * 24
+        self.counters[Monitor.REQUESTS]  = [0] * 24
+        self.counters[Monitor.THROUGHPUT]  = [0] * 24
+        self.counters[Monitor.PUTS]  = [0] * 24
 
         self.log = []
 
