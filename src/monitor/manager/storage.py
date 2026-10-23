@@ -111,37 +111,41 @@ class Storage:
         else:
             print(f"Failed to insert data: {response.status_code} - {response.text}")
  
-    def bulk_put_row(self, base_url:str, userid:str, password:str, name_space:str, table_name:str, values:str):
-         url = f"{base_url}/{name_space}:{table_name}/false-row-key" 
-         headers = {"Content-Type": "application/json", "Accept": "application/json"}
-         rows = []
+    def bulk_put_row(self, base_url:str, name_space:str, table_name:str, userid:str, password:str, values:str):
+        url = f"{base_url}/{name_space}:{table_name}/false-row-key" 
+        print(f"URL: {json.dumps(url)} - {userid} - {password}")
+        headers = {"Content-Type": "application/json", "Accept": "application/json"}
+        rows = []
 
-         for row, column in values.items():
-            print(f"Row: {row}, Value: {json.dumps(column)}")
+        for row in values:
+            columns = []
+
+            for column in row["cell"]:
+                columns.append({
+                    "column": Storage.b64_encode(f"{column["column"]["family"]}:{column["column"]["qualifier"]}"),
+                    "$": Storage.b64_encode(column["column"]["value"])
+                })
 
             rows.append(
                 {
-                    "key": Storage.b64_encode(row),
-                    "Cell": [
-                        {
-                            "column": Storage.b64_encode(f"{column['family']}:{column['qualifier']}"),
-                             "$": Storage.b64_encode(column['value']),
-                        }
-                    ]
+                    "key": Storage.b64_encode(row['row_key']),
+                    "Cell": columns
                 }
             )
- 
-         payload = {
-             "Row": rows
-         }
- 
-         response = requests.put(url, headers=headers, auth=(userid, password),  json=payload, verify=False)
+
+        payload = {
+            "Row": rows
+        }
         
-         if int(response.status_code) == 200:
-            self.monitor.add_counter(Counter.PUTS, len(rows))
+    #    print(json.dumps(payload))
+
+        response = requests.put(url, headers=headers, auth=(userid, password),  json=payload, verify=False)
+    
+        if int(response.status_code) == 200:
+            self.monitor.add_counter(Monitor.PUTS, len(rows))
             print(f"Successfully inserted rows: {len(rows)}")
-         else:
-             print(f"Failed to insert rows: {response.status_code} - {response.text}")
+        else:
+            print(f"Failed to insert rows: {response.status_code} - {response.text}")
  
     def get_row(self, base_url:str, userid:str, password:str, name_space:str, table_name:str, row_key: str):
 
