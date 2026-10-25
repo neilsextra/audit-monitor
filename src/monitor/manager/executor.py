@@ -10,9 +10,9 @@ class Executor:
     CHECKPOINT_COLUMN = "json:checkpoint"
     TOKENS_COLUMN = "json:tokens"
  
-    def __init__(self, monitor, command, storage, checkpointer) -> None:
+    def __init__(self, monitor, connector, storage, checkpointer) -> None:
         self.monitor = monitor
-        self.command = command
+        self.connector = connector
         self.storage = storage
         self.checkpointer = checkpointer
           
@@ -37,7 +37,7 @@ class Executor:
 
                 process = json.loads(request)
 
-                response = self.command.get_request_details(parameters["identity_url"], 
+                response = self.connector.get_request_details(parameters["identity_url"], 
                                                             parameters["identity_client"],
                                                             parameters["identity_secret"], 
                                                             credential, 
@@ -141,7 +141,7 @@ class Executor:
         returned = 0
 
         while True:  
-            response = self.command.retrieve_requests(parameters["identity_url"], 
+            response = self.connector.retrieve_requests(parameters["identity_url"], 
                                                     parameters["identity_client"], 
                                                     parameters["identity_secret"], 
                                                     credential, 
