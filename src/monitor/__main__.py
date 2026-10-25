@@ -3,12 +3,9 @@ import os
 from pathlib import Path
 
 if sys.argv[1:]:
-    print(f"Arguments: {sys.argv[0]}")
     sys.path.insert(0, f"{Path.home()}{os.sep}{sys.argv[1]}")
 
 sys.path.insert(0, f"{Path.home()}{os.sep}pylib")
-
-print(f"Amended System pathlib: {sys.path}")
 
 from flask import Flask, Blueprint, render_template, request
 
@@ -66,11 +63,9 @@ def get_command():
         app.logger.info(f'configure [datalake]: [{datalake_url}] : [{datalake_namespace}] : [{datalake_userid}]')
         app.logger.info(f'configure [identity]: [{identity_url}] : [{identity_userid}] : [{identity_clientid}]')
          
-        response_get_tokens = command.get_tokens(identity_url, identity_userid, identity_password,  identity_clientid, identity_secret)
+        response_get_tokens = connector.get_tokens(identity_url, identity_userid, identity_password,  identity_clientid, identity_secret)
 
         result["control"] = response_get_tokens
-
-        app.logger.info(f'{json.dumps(response_get_tokens)}')
 
         if (int(response_get_tokens["status_code"]) in [200, 201]):
             host_name = urlparse(identity_url).hostname
@@ -171,17 +166,19 @@ def start():
 if __name__ == "__main__":
     container = Container()
 
-    command = container.command()
+    connector = container.connector()
     storage = container.storage()
     monitor = container.monitor()
     executor = container.executor()
+    checkpointer = container.checkpointer()
 
-    command.set_logger(app.logger)
+    connector.set_logger(app.logger)
     storage.set_logger(app.logger)
     monitor.set_logger(app.logger)
     executor.set_logger(app.logger)
-
-    monitor.message("Audit Monitor - started...")
+    checkpointer.set_logger(app.logger)
+ 
+    monitor.message("[main] Audit Monitor - started...")
    
     port = 8080
 
