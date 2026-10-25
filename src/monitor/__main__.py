@@ -57,60 +57,17 @@ def get_command():
 
     command_action = request.values.get('configure_action', 'configure')
 
-    result = {}
-
-    try:
-        app.logger.info(f'configure [datalake]: [{datalake_url}] : [{datalake_namespace}] : [{datalake_userid}]')
-        app.logger.info(f'configure [identity]: [{identity_url}] : [{identity_userid}] : [{identity_clientid}]')
-         
-        response_get_tokens = connector.get_tokens(identity_url, identity_userid, identity_password,  identity_clientid, identity_secret)
-
-        result["control"] = response_get_tokens
-
-        if (int(response_get_tokens["status_code"]) in [200, 201]):
-            host_name = urlparse(identity_url).hostname
-
-            app.logger.info(f'configure [host]: [{host_name}]')
-
-            if not storage.table_exists(datalake_url, datalake_namespace, datalake_userid, datalake_password, host_name):
-                monitor.message(f"[{command_action}] Datalake table - '{host_name}' exists")
- 
-                if command_action == "reset":
-                    storage.drop_table(datalake_url, datalake_namespace, datalake_userid, datalake_password, host_name)
-                    monitor.message(f"[{command_action}] Datalake table - '{host_name}' dropped")
-                
-                storage.create_table(datalake_url, datalake_namespace, datalake_userid, datalake_password, host_name, "json")
-                monitor.message(f"[{command_action}] Datalake table - '{host_name}' created")
- 
-                result['status'] = "table-created"
-            else:
-                result['status'] = "table-exists"
-
-            storage.put_row(datalake_url, datalake_namespace, datalake_userid, datalake_password, host_name, "$", "json", "service", json.dumps(result))
-
-            monitor.message(f"[{command_action}] Datalake table - '{host_name}' put token")
-
-            if command_action in ['configure', 'reset']:
-                storage.put_row(datalake_url, datalake_namespace, datalake_userid, datalake_password, host_name, "$", "json", "checkpoint", json.dumps({
-                    'time': 0
-                }))
-                
-                monitor.message(f"[{command_action}] Datalake table - '{host_name}' updated token")
-                
-                
-            return json.dumps(result, sort_keys=True), 200
-
-        else:
-            result["tokens"] = response_get_tokens
-
-            return json.dumps(result, sort_keys=True), int(response_get_tokens["status_code"])         
-    
-    except Exception as error:
-        monitor.message(f"[{command_action}] error {repr(error)}")
-        app.logger.error(repr(error))
-        return json.dumps({
-            "text": repr(error)
-        }, sort_keys=True), 500
+    return command.action(
+    {
+            "datalake_url": request.headers.get('datalake-url'),
+            "datalake_namespace": request.headers.get('datalake-namespace'),
+            "datalake_userid": request.headers.get('datalake-userid'),
+            "datalake_password": request.headers.get('datalake-password'), 
+            "identity_url": request.headers.get('identity-url'),
+            "identity_client": request.headers.get('identity-clientid'),
+            "identity_secret": request.headers.get('identity-secret')
+        },
+        request.values.get('configure_action', 'configure'))
         
 @app.route("/monitor", methods=["GET"])
 def get_monitor():
@@ -171,13 +128,15 @@ if __name__ == "__main__":
     monitor = container.monitor()
     executor = container.executor()
     checkpointer = container.checkpointer()
-
+    command = container.command()
+ 
     connector.set_logger(app.logger)
     storage.set_logger(app.logger)
     monitor.set_logger(app.logger)
     executor.set_logger(app.logger)
     checkpointer.set_logger(app.logger)
- 
+    command.set_logger(app.logger)
+   
     monitor.message("[main] Audit Monitor - started...")
    
     port = 8080
