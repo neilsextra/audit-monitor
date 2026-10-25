@@ -3,6 +3,7 @@ from manager.monitor import Monitor
 from manager.command import Command
 from manager.storage import Storage
 from manager.executor import Executor
+from manager.checkpointer import Checkpointer
 
 class Container(containers.DeclarativeContainer):
 
@@ -10,5 +11,5 @@ class Container(containers.DeclarativeContainer):
     
     command = providers.Factory(Command, monitor)
     storage = providers.Factory(Storage, monitor)
-
-    executor = providers.Factory(Executor, monitor, command, storage)
+    checkpointer = providers.Factory(Checkpointer, monitor, storage)
+    executor = providers.Factory(Executor, monitor, command, storage, checkpointer)
