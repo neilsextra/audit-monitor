@@ -3,9 +3,9 @@ from urllib.parse import urlparse
 
 class Command:
 
-    def __init__(self, monitor, connector, storage) -> None:
+    def __init__(self, monitor, accessor, storage) -> None:
         self.monitor = monitor      
-        self.connector = connector
+        self.accessor = accessor
         self.storage = storage
     
     def set_logger(self, logger):
@@ -18,7 +18,7 @@ class Command:
             self.logger.info(f'configure [datalake]: [{parameters["datalake_url"]}] : [{parameters["datalake_namespace"]} : {parameters["datalake_userid"]}')
             self.logger.info(f'configure [identity]: [{parameters["identity_url"]} : [{parameters["identity_userid"]}] : [{parameters["identity_clientid"]}')
             
-            response_get_tokens = self.connector.get_tokens(parameters["identity_url"], 
+            response_get_tokens = self.accessor.get_tokens(parameters["identity_url"], 
                                                             parameters["identity_userid"], 
                                                             parameters["identity_password"],  
                                                             parameters["identity_clientid"], 
