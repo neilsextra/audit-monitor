@@ -14,7 +14,7 @@ class Checkpointer:
 
         self.checkpoint_counter_lock = threading.Lock()
         self.checkpoint_time_lock = threading.Lock()
-                
+            
     def set_checkpoint_time(self, checkpoint_time):
         with self.checkpoint_time_lock:
             self.checkpoint_time = checkpoint_time
@@ -41,6 +41,7 @@ class Checkpointer:
                             json.dumps({
                                 'time': self.checkpoint_time
                             }))
+            
             with self.checkpoint_counter_lock:
                 self.checkpoint_counter = 0
             
@@ -52,5 +53,5 @@ class Checkpointer:
                              parameters["host_name"],
                              "$", "json", "checkpoint", 
                         json.dumps({
-                            'time': time
+                            "time": time
                         }))
