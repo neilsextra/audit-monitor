@@ -1,190 +1,177 @@
-import queue
-import threading
+import requests
 import json
-import time
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+from urllib.parse import urlparse
 
-from manager.monitor import Monitor
+class Accessor:
 
-class Executor:
-    CONFIGURATION_ROW = "$"
-    CHECKPOINT_COLUMN = "json:checkpoint"
-    TOKENS_COLUMN = "json:tokens"
+    USERS_LIST = "/IDMProv/rest/access/users/list"
+    HISTORY_URL = "/IDMProv/rest/access/requests/historyForUser"
+    DN_DETAILS_URL = "/IDMProv/rest/access/users/details"
+    REQUEST_DETAILS_URL = "/IDMProv/rest/access/requests/history/item?includeSystemComments=true"
+    REQUEST_LIST_URL = "/IDMProv/rest/access/monitoring/process/list"
  
-    def __init__(self, monitor, accessor, storage, checkpointer) -> None:
+    TOKEN_ENDPOINT = "token_endpoint"
+    REVOCATION_ENDPOINT = "revocation_endpoint"
+
+    def __init__(self, monitor) -> None:
         self.monitor = monitor
-        self.accessor = accessor
-        self.storage = storage
-        self.checkpointer = checkpointer
-          
+
     def set_logger(self, logger):
-        self.logger = logger
+         self.logger = logger
 
-    def processor(self, worker_id: int, parameters:object, credential:object, task_queue: queue.Queue):
-        self.monitor.message(f"[{worker_id}] worker - started processing...")
+    def get_urls(self, session, url):
+        url_base = str(url).split("?")[0]
 
-        rows = []
-        start_timer = 0
+        oauth2_issuer = url_base + "/osp/a/idm/auth/oauth2"
 
-        while True:
-            try:
-                start_timer = time.perf_counter()
-                
-                request = task_queue.get(timeout=1000)
-          
-                if (request == "close"):
-                    self.monitor.message(f"[{worker_id}] worker - shutdown commencing...")
-                    break
+        response = requests.get(oauth2_issuer + "/.well-known/openid-configuration", verify=False)
+        oaInfo = json.loads(response.text)
 
-                process = json.loads(request)
+        return oaInfo
+    
+    def get_session(self):
+        session = requests.Session()
+        retry = Retry( total=100, connect=100, read=100, backoff_factor=0.5)
+        adapter = HTTPAdapter(max_retries=retry)
+        session.mount('http://', adapter)
+        session.mount('https://', adapter)
 
-                response = self.accessor.get_request_details(parameters["identity_url"], 
-                                                            parameters["identity_client"],
-                                                            parameters["identity_secret"], 
-                                                            credential, 
-                                                            process['requestId'])
-                                
-                history = json.loads(request)
-                
-                rows.append({
-                    "row_key": process['requestId'],
-                    "cell": [ 
-                        {
-                            "column": {
-                                "family": "json",
-                                "qualifier": "summary",
-                                "value": json.dumps(process)
-                            }
-                        },
-                        {
-                        "column": {
-                                "family": "json",
-                                "qualifier": "summary",
-                                "value": json.dumps(history)
-                            }
-                        }      
-                    ]
-                })
-                
-                if (len(rows) == parameters["batch_size"]):
-                    self.storage.bulk_put_row(parameters["datalake_url"], 
-                            parameters["datalake_namespace"],
-                            parameters["host_name"],
-                            parameters["datalake_userid"],
-                            parameters["datalake_password"],
-                            rows
-                    )
+        return session
+    
+    def get_tokens(self, url, userid, password, clientid, secret):
+        session = self.get_session()
+        urls = self.get_urls(session, url)
 
-                self.checkpointer.checkpoint(parameters, int(process['creationTime']))
+        parsed_url = urlparse(url)
 
-                self.monitor.add_counter(Monitor.THROUGHPUT, len(json.dumps(rows)))
-                self.monitor.add_counter(Monitor.TIMES, (time.perf_counter() - start_timer) * 1000)
-
-            except queue.Empty:
-                continue
-
-              
-        if len(rows) > 0:
-            self.storage.bulk_put_row(parameters["datalake_url"], 
-                            parameters["datalake_namespace"],
-                            parameters["host_name"],
-                            parameters["datalake_userid"],
-                            parameters["datalake_password"],
-                            rows
-                    )
-            
-            self.monitor.add_counter(Monitor.THROUGHPUT, len(json.dumps(rows)))
-            self.monitor.add_counter(Monitor.TIMES, (time.perf_counter() - start_timer) * 1000)           
-
-        self.monitor.message(f"[{worker_id}] worker - shutdown")
-
-        task_queue.task_done()
-
-    def task(self, logger,  monitor, parameters):
-        task_queue = queue.Queue()
-        threads = []
-
-        num_worker_threads = parameters["threads"]
-
-        config = self.storage.get_row(parameters["datalake_url"],  
-                                        parameters["datalake_userid"], 
-                                        parameters["datalake_password"], 
-                                        parameters["datalake_namespace"], 
-                                        parameters["host_name"],
-                                        Executor.CONFIGURATION_ROW)
-
-        checkpoint_time = None
-        tokens = None
+        self.logger.info(f"token_endpoint={urls["token_endpoint"]}, userid={userid}, password={password}, clientid={clientid}, secret={secret}")
  
-        for column in config:
-            if column["col"] == "json:checkpoint":
-                column_values = json.loads(column["val"])            
-                checkpoint_time = column_values["time"]
+        headers = {"content-type": "application/x-www-form-urlencoded"}
+        payload = {"grant_type": "password", "username": userid, "password": password}
+        response = session.post(urls["token_endpoint"], headers=headers, data=payload, verify=False, auth=(clientid, secret))
 
-            elif column["col"] == "json:service":
-                rest_service = json.loads(column["val"])
-                credential = {
-                            "tokens" : rest_service["control"]["tokens"],
-                            "urls": rest_service["control"]["urls"]
-                        }
+        if response.status_code == 500:
+            self.monitor.message(f"[command] generated tokens - failed - {response.status_code}") 
+            raise Exception(f"Unable to obtain token: {response.status_code}")
 
-        self.monitor.message(f'[execution] - threads={num_worker_threads} - checkpoint={checkpoint_time}')
-            
-        for worker in range(num_worker_threads):
-            thread = threading.Thread(target=self.processor, args=(worker, parameters, credential, task_queue), daemon=True)
-            thread.start()
-            threads.append(thread)
+        tokens = json.loads(response.text)
 
-        start = 0
-        total = 0
-        returned = 0
+        self.monitor.message("[command] generated tokens") 
 
-        checkpoint_time = None
+        return {
+            "url": url,
+            "netloc": parsed_url.netloc,
+            "status_code" : response.status_code,
+            "tokens" : tokens, 
+            "userid": userid,
+            "urls" : urls}
 
-        while True:  
-            response = self.accessor.retrieve_requests(parameters["identity_url"], 
-                                                    parameters["identity_client"], 
-                                                    parameters["identity_secret"], 
-                                                    credential, 
-                                                    start, parameters["page_size"], 
-                                                    checkpoint_time)
-            returned = response["returned"]
-            total += returned
-            start += parameters["page_size"]
+    def refresh_token(self, client, secret, credential):
 
-            self.monitor.message(f"[retrieve]:  ({response["status_code"]}) - {parameters["page_size"]} - {returned} - {total} - {len(response["requests"])}")
+        refresh_token = credential["tokens"]["refresh_token"]
+        token_endpoint = credential["urls"]["token_endpoint"]
 
-            self.monitor.add_counter(Monitor.REQUESTS, returned)
+        session = self.get_session()
+    
+        headers = {"content-type": "application/x-www-form-urlencoded"}
+        payload = {"grant_type": "refresh_token", "refresh_token": refresh_token}
 
-            for request in response["requests"]:
-                processInfo = json.dumps(request)
-                task_queue.put(processInfo)
-                checkpoint_time = request['creationTime'] if request['creationTime'] > checkpoint_time
+        response = session.post(token_endpoint, headers=headers, data=payload, verify=False, auth=(client, secret))
+ 
+        return token_endpoint, json.loads(response.text)
+
+    def logoff(self, session, token):
+        urls = self.get_urls
+        headers = {"Authorization": token['token_type'] + " " + token["access_token"], "Content-Type": "application/json"}
+        response = session.post(urls[Accessor.REVOCATION_ENDPOINT], headers=headers,  verify=False)
+
+    def get_dn(self, url_base, client, secret, credential, dn:str):
+ 
+        url, token = self.refresh_token(client, secret, credential)
+
+        headers = {"Authorization": token['token_type'] + " " + token["access_token"], "Content-Type": "application/json"}
         
-            if returned != parameters["page_size"]: 
-                break
-        
-        for worker in range(num_worker_threads):
-            task_queue.put(f"close")
+        session = self.get_session()
+       
+        params = {"userDn": dn}
 
-        self.monitor.message(f"[retrieve]: task waiting on thread join")
-        
-        for thread in threads:
-            thread.join()
+        response = session.get(url_base + Accessor.DN_DETAILS_URL, params=params, headers=headers, verify=False)
 
-        if (checkpoint_time != None):
-            self.checkpointer.finalize(parameters, checkpoint_time)
-            self.monitor.message(f"[retrieve]: checkpoint written - {checkpoint_time}") 
-
-        self.monitor.message(f"[retrieve]: task completed")        
-
-    def execute(self, parameters):
-        
-        thread = threading.Thread(target=self.task, args=(self.logger,  self.monitor, parameters), daemon=True)
-        
-        self.monitor.message(f"[execute]:  task thread: '{thread.name}'")
-        thread.start()
-
-        return { 
-            "status_code" : 200, 
-            "response": f"task: {thread.ident}"
+        return { "status_code" : response.status_code,
+                 "reason" : response.reason,
+                 "response": response.text
         }
+
+    def get_requests(self, url_base:str, client:str, secret, credential, dn:str):
+        url, token = self.refresh_token(client, secret, credential)
+
+        headers = {"Authorization": token["token_type"] + " " + token["access_token"], "Content-Type": "application/json"}
+        session = self.get_session()        
+        payload = {"dn": dn, "start":0, "size": 25}
+   
+        response = session.post(url_base + Accessor.HISTORY_URL + "?size=100", data=json.dumps(payload), headers=headers, verify=False)
+
+        return { "status_code" : response.status_code,
+                 "reason" : response.reason,
+                 "response": json.dumps(response.text)
+        }
+    
+    def get_request_details(self, url_base, client, secret, credential, id):
+             
+        url, token = self.refresh_token(client, secret, credential)
+
+        headers = {"Authorization": token['token_type'] + " " + token["access_token"], "Content-Type": "application/json"}
+        session = self.get_session()
+        payload = {"id": id, "entityType": "prd"}
+
+        response = session.post(url_base + Accessor.REQUEST_DETAILS_URL, data=json.dumps(payload), headers=headers, verify=False)
+
+        return { "status_code" : response.status_code,
+                 "reason" : response.reason,
+                 "response": response.text
+        }
+
+    def retrieve_requests(self, url_base:str, client:str, secret:str, credential, start:str, size:str, creation_time:int):
+
+        url, token = self.refresh_token(client, secret, credential)
+
+        headers = {"Authorization": token["token_type"] + " " + token["access_token"], "Content-Type": "application/json"}
+
+        session = self.get_session()   
+        params = {"startIndex":start, "size": size} 
+
+        if creation_time != None:
+            print(f"[accessor] Creation time: {creation_time} ")
+            params = {"startIndex": start, "size":size, "sortOrder":"asc" , "operator": "GT", "creationTime":creation_time, "sortField":"CREATION_TIME"}
+
+        response = session.get(url_base + Accessor.REQUEST_LIST_URL, params=params, headers=headers, verify=False)
+ 
+        if response.status_code not in(200, 201):
+            self.logger.info(f"[command] - error {response.status_code} - {response.reason} - {response.text}")
+            
+            return { "status_code" : response.status_code,
+                            "reason" : response.reason,
+                            "response": response.text
+                    }
+
+        processes = json.loads(response.text)
+
+        if "processInfoNodeList" in processes:
+            requests_count = len(processes["processInfoNodeList"])
+
+            return { "status_code" : response.status_code,
+                    "reason" : response.reason,
+                    "response": json.dumps(response.text),
+                    "requests": processes["processInfoNodeList"],
+                    "returned": requests_count
+            }
+        else:
+            return { "status_code" : response.status_code,
+            "reason" : response.reason,
+            "response": json.dumps(response.text),
+            "requests": [],
+            "returned": 0
+            }
+     
