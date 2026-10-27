@@ -10,9 +10,9 @@ class Executor:
     CHECKPOINT_COLUMN = "json:checkpoint"
     TOKENS_COLUMN = "json:tokens"
  
-    def __init__(self, monitor, connector, storage, checkpointer) -> None:
+    def __init__(self, monitor, accessor, storage, checkpointer) -> None:
         self.monitor = monitor
-        self.connector = connector
+        self.accessor = accessor
         self.storage = storage
         self.checkpointer = checkpointer
           
@@ -37,7 +37,7 @@ class Executor:
 
                 process = json.loads(request)
 
-                response = self.connector.get_request_details(parameters["identity_url"], 
+                response = self.accessor.get_request_details(parameters["identity_url"], 
                                                             parameters["identity_client"],
                                                             parameters["identity_secret"], 
                                                             credential, 
@@ -105,48 +105,48 @@ class Executor:
 
         num_worker_threads = parameters["threads"]
 
-        status = self.storage.get_row(parameters["datalake_url"],  
+        config = self.storage.get_row(parameters["datalake_url"],  
                                         parameters["datalake_userid"], 
                                         parameters["datalake_password"], 
                                         parameters["datalake_namespace"], 
                                         parameters["host_name"],
                                         Executor.CONFIGURATION_ROW)
 
- 
-        checkpoint = None
+        checkpoint_time = None
         tokens = None
  
-        for column in status:
-
+        for column in config:
             if column["col"] == "json:checkpoint":
-                checkpoint =  json.loads(column["val"])["time"]
-            if column["col"] == "json:service":
+                column_values = json.loads(column["val"])            
+                checkpoint_time = column_values["time"]
+
+            elif column["col"] == "json:service":
                 rest_service = json.loads(column["val"])
                 credential = {
                             "tokens" : rest_service["control"]["tokens"],
                             "urls": rest_service["control"]["urls"]
                         }
 
-        self.monitor.message(f'[execution] - started - threads={num_worker_threads}')
+        self.monitor.message(f'[execution] - threads={num_worker_threads} - checkpoint={checkpoint_time}')
             
         for worker in range(num_worker_threads):
             thread = threading.Thread(target=self.processor, args=(worker, parameters, credential, task_queue), daemon=True)
             thread.start()
             threads.append(thread)
 
-        print(f"Checkpoint/Page Size: {checkpoint} - {parameters['page_size']}")
-
         start = 0
         total = 0
         returned = 0
 
+        checkpoint_time = None
+
         while True:  
-            response = self.connector.retrieve_requests(parameters["identity_url"], 
+            response = self.accessor.retrieve_requests(parameters["identity_url"], 
                                                     parameters["identity_client"], 
                                                     parameters["identity_secret"], 
                                                     credential, 
                                                     start, parameters["page_size"], 
-                                                    checkpoint)
+                                                    checkpoint_time)
             returned = response["returned"]
             total += returned
             start += parameters["page_size"]
@@ -154,9 +154,11 @@ class Executor:
             self.monitor.message(f"[retrieve]:  ({response["status_code"]}) - {parameters["page_size"]} - {returned} - {total} - {len(response["requests"])}")
 
             self.monitor.add_counter(Monitor.REQUESTS, returned)
-    
+
             for request in response["requests"]:
-                task_queue.put(json.dumps(request))
+                processInfo = json.dumps(request)
+                task_queue.put(processInfo)
+                checkpoint_time = request['creationTime'] if request['creationTime'] > checkpoint_time
         
             if returned != parameters["page_size"]: 
                 break
@@ -168,6 +170,10 @@ class Executor:
         
         for thread in threads:
             thread.join()
+
+        if (checkpoint_time != None):
+            self.checkpointer.finalize(parameters, checkpoint_time)
+            self.monitor.message(f"[retrieve]: checkpoint written - {checkpoint_time}") 
 
         self.monitor.message(f"[retrieve]: task completed")        
 
