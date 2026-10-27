@@ -123,14 +123,14 @@ def start():
 if __name__ == "__main__":
     container = Container()
 
-    connector = container.connector()
+    accessor = container.accessor()
     storage = container.storage()
     monitor = container.monitor()
     executor = container.executor()
     checkpointer = container.checkpointer()
     command = container.command()
  
-    connector.set_logger(app.logger)
+    accessor.set_logger(app.logger)
     storage.set_logger(app.logger)
     monitor.set_logger(app.logger)
     executor.set_logger(app.logger)
