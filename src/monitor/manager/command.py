@@ -1,7 +1,10 @@
 import json
+import time
 from urllib.parse import urlparse
 
 class Command:
+    
+    CONFIGURATION_ROW = "$"
 
     def __init__(self, monitor, accessor, storage) -> None:
         self.monitor = monitor      
@@ -25,6 +28,7 @@ class Command:
                                                             parameters["identity_secret"])
     
             result["control"] = response_get_tokens
+            status = ""
     
             if (int(response_get_tokens["status_code"]) in [200, 201]):
                 host_name = urlparse(parameters["identity_url"]).hostname
@@ -53,16 +57,22 @@ class Command:
                                                 host_name, "json")
                     self.monitor.message(f"[{action}] Datalake table - '{host_name}' created")
     
-                    result['status'] = "table-created"
+                    status = "table-created"
                 else:
-                    result['status'] = "table-exists"
+                    status = "table-exists"
+
+                result["token-time"] = int(time.time())
     
                 self.storage.put_row(parameters["datalake_url"], 
                                      parameters["datalake_namespace"], 
                                      parameters["datalake_userid"], 
                                      parameters["datalake_password"], 
-                                     host_name, "$", "json", "service", json.dumps(result))
-    
+                                     host_name, 
+                                     Command.CONFIGURATION_ROW, 
+                                     "json", "service", json.dumps(result))
+
+                result["status"] = status
+
                 self.monitor.message(f"[{action}] Datalake table - '{host_name}' put token")
     
                 if action in ['configure', 'reset']:
@@ -70,7 +80,9 @@ class Command:
                                      parameters["datalake_namespace"], 
                                      parameters["datalake_userid"], 
                                      parameters["datalake_password"], 
-                                     host_name, "$", "json", "checkpoint", json.dumps({
+                                     host_name, 
+                                     Command.CONFIGURATION_ROW, 
+                                     "json", "checkpoint", json.dumps({
                         'time': 0
                     }))
                     
@@ -81,7 +93,7 @@ class Command:
     
             else:
                 result["tokens"] = response_get_tokens
-    
+
                 return json.dumps(result, sort_keys=True), int(response_get_tokens["status_code"])         
         
         except Exception as error:
@@ -90,3 +102,14 @@ class Command:
             return json.dumps({
                 "text": repr(error)
             }, sort_keys=True), 500
+
+    def report(self, parameters):
+
+        config, status_code = self.storage.get_row(parameters["datalake_url"],  
+                                              parameters["datalake_userid"], 
+                                              parameters["datalake_password"], 
+                                              parameters["datalake_namespace"], 
+                                              parameters["host_name"],
+                                              Command.CONFIGURATION_ROW)  
+
+        return config, status_code         
