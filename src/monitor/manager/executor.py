@@ -105,15 +105,17 @@ class Executor:
 
         num_worker_threads = parameters["threads"]
 
-        config = self.storage.get_row(parameters["datalake_url"],  
+        config, status_code = self.storage.get_row(parameters["datalake_url"],  
                                         parameters["datalake_userid"], 
                                         parameters["datalake_password"], 
                                         parameters["datalake_namespace"], 
                                         parameters["host_name"],
                                         Executor.CONFIGURATION_ROW)
 
+        if status_code not in [200, 201]:
+            return
+
         checkpoint_time = None
-        tokens = None
  
         for column in config:
             if column["col"] == "json:checkpoint":
@@ -158,7 +160,8 @@ class Executor:
             for request in response["requests"]:
                 processInfo = json.dumps(request)
                 task_queue.put(processInfo)
-                checkpoint_time = request['creationTime'] if request['creationTime'] > checkpoint_time
+                checkpoint_time = request['creationTime']
+                print(checkpoint_time)
         
             if returned != parameters["page_size"]: 
                 break
@@ -175,7 +178,8 @@ class Executor:
             self.checkpointer.finalize(parameters, checkpoint_time)
             self.monitor.message(f"[retrieve]: checkpoint written - {checkpoint_time}") 
 
-        self.monitor.message(f"[retrieve]: task completed")        
+        self.monitor.message(f"[retrieve]: task completed")    
+
 
     def execute(self, parameters):
         
