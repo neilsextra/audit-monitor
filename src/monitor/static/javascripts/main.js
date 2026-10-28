@@ -1,416 +1,275 @@
-'use strict'
+function Message() {
 
-var tableView = null;
-var userList = [];
-var entryList = [];
-var rows = [];
+    this._command = function (datalakeUrl, datalakeNamespace, datalakeUserid, datalakePassword,
+        identityUrl, identityUserid, identityPassword, identityClientId, identitySecret,
+        command) {
 
-var barchartThroughput = null;
-var barchartRequests = null;
-var barchartExecuteTime = null;
+        return new Promise((accept, reject) => {
+            let parmURL = `/command?action=${encodeURIComponent(command)}`
 
-function convert(date) {
-    const dateObj = new Date(date);
+            var xhttp = new XMLHttpRequest();
 
-    return dateObj.getTime();
+            xhttp.open("GET", parmURL, true);
 
-}
+            xhttp.setRequestHeader("datalake-url", datalakeUrl);
+            xhttp.setRequestHeader("datalake-namespace", datalakeNamespace);
+            xhttp.setRequestHeader("datalake-userid", datalakeUserid);
+            xhttp.setRequestHeader("datalake-password", datalakePassword);
+            xhttp.setRequestHeader("identity-url", identityUrl);
+            xhttp.setRequestHeader("identity-userid", identityUserid);
+            xhttp.setRequestHeader("identity-password", identityPassword);
+            xhttp.setRequestHeader("identity-clientid", identityClientId);
+            xhttp.setRequestHeader("identity-secret", identitySecret);
 
-function formatTime(epochTime, adjustment = 1) {
-    const date = new Date(epochTime * adjustment);
+            xhttp.onreadystatechange = async function () {
+                xhttp.onload = function () {
 
-    date.toLocaleString('en-AU', { timeZone: 'Australia/Sydney' });
+                    if (this.readyState === 4 && this.status === 200) {
+                        var response = JSON.parse(xhttp.response);
 
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
+                        accept({
+                            status: this.status,
+                            response: response
+                        });
 
-    return `${year}-${month}-${day} ${hours}:${minutes}`;
+                    } else {
 
-}
+                        reject({
+                            status: this.status,
+                            message: this.statusText
+                        });
 
-async function command(action) {
-    try {
+                    }
 
-        document.getElementById("wait-dialog").showModal();
+                };
 
-        var message = new Message();
+                xhttp.onerror = function () {
+                };
 
-        var response = await message.command(
-            document.getElementById("datalake-url").value,
-            document.getElementById("datalake-namespace").value,
-            document.getElementById("datalake-userid").value,
-            document.getElementById("datalake-password").value,
-            document.getElementById("identity-url").value,
-            document.getElementById("identity-userid").value,
-            document.getElementById("identity-password").value,
-            document.getElementById("identity-clientid").value,
-            document.getElementById("identity-secret").value,
-            action);
-
-        document.getElementById("wait-dialog").close();
-
-        document.getElementById("command-dialog").close();
-
-        document.getElementById("cancel-command-dialog").style.visibility = "visible";
-        document.getElementById("command-button").disabled = false;
-
-        document.getElementById("status").innerHTML = `${document.getElementById("datalake-url").value} - connected`;
-
-        await updateStatus();
-
-        enable("server-action");
-
-        document.getElementById("wait-dialog").close();
-        document.getElementById("command-dialog").close();
-
-    } catch (exception) {
-
-        if (exception.trace) {
-            console.log(exception.trace);
-        } else {
-            console.log(exception);
-        }
-
-        document.getElementById("wait-dialog").close();
-        showError(exception.message);
-
-    }
-
-}
-
-function enable(className, enable = true) {
-
-    for (var button of document.getElementsByClassName(className)) {
-        button.disabled = !enable;
-    }
-
-}
-
-async function updateStatus() {
-    var message = new Message();
-    var response = await message.monitor();
-
-    console.log(JSON.stringify(response));
-
-    var table = document.getElementById("log-messages");
-
-    table.replaceChildren();
-
-    for (var entry of response["response"]["log"]) {
-        var row = table.insertRow();
-
-        var cell = row.insertCell();
-
-        cell.className = "log-table-item";
-        cell.style.width = "100px";
-
-        cell.innerHTML = formatTime(entry.time, 1000);
-
-        cell = row.insertCell();
-
-        cell.className = "log-table-item";
-        cell.innerHTML = entry.message;
-
-    }
-
-    var counters = response.response.counters;
-    var currentHour = new Date(Date.now()).getHours();
-
-    barchartThroughput.setOptimumScale(counters.throughput);
-
-    barchartRequests.setOptimumScale(counters.requests);
-    barchartExecuteTime.setOptimumScale(counters.times);
-
-    barchartThroughput.draw(counters.throughput, currentHour, "#008080", "#ccffff", 2);
-
-    barchartRequests.draw(counters.requests, currentHour, "#008080", "#ccffff", 0);
-    barchartExecuteTime.draw(counters.times, currentHour, "#008080", "#ccffff", 0);
-
-    document.getElementById("throughput-label").innerHTML =
-        `Throughput Datalake (Units : ${barchartThroughput.precision}) - ${Math.trunc(counters.throughput[currentHour] / barchartThroughput.precision)}`;
-
-    document.getElementById("executes-label").innerHTML =
-        `Request Returned (Units : ${barchartRequests.precision}) - ${Math.trunc(counters.requests[currentHour] / barchartRequests.precision)}`;
-
-    document.getElementById("execute-times-label").innerHTML =
-        `Execution Time (Units : ${barchartExecuteTime.precision}) - ${Math.trunc(counters.times[currentHour] / barchartExecuteTime.precision)}`;
-
-}
-
-function showError(message) {
-
-    document.getElementById("error-message").innerHTML = message;
-    document.getElementById("error-dialog").showModal();
-
-}
-
-function clean(id) {
-    var element = document.getElementById(id);
-
-    while (element.hasChildNodes()) {
-        element.removeChild(element.firstChild);
-    }
-
-}
-
-function activate(pages) {
-
-    for (var page of pages) {
-        document.getElementById(page["tab"]).classList = page['activate'] ? "rotate-active" : "rotate-inactive";
-        document.getElementById(page["panel"]).style.display = page['activate'] ? "inline-block" : "none";
-    }
-
-}
-
-function showTable() {
-
-    window.setTimeout(function () {
-        if (tableView != null) {
-            tableView.setup();
-            tableView.resize();
-        }
-    }, 10);
-
-}
-
-function contains(table, value) {
-    for (var i = 0, row; (row = table.rows[i]); i++) {
-
-        if (row.cells[0].innerHTML.trim().toUpperCase() == value.trim().toUpperCase()) {
-            return true;
-        }
-
-    }
-    return false;
-
-}
-
-function addRow(table, value, callback) {
-    var row = table.insertRow();
-
-    row.setAttribute("onclick", `window.${callback}('${value}')`, 0);
-
-    var cell = row.insertCell();
-    cell.className = "result-table-item";
-    cell.style.textWrap = "nowrap";
-    cell.style.whiteSpace = "nowrap";
-
-    cell.innerHTML = value;
-
-}
-
-/**
- * Respond to the Document 'ready' event
- */
-window.onload = async function () {
-
-    document.getElementById("ok-configure").addEventListener('click', async (e) => {
-
-        await command("configure");
-
-    });
-
-    document.getElementById("ok-connect").addEventListener('click', async (e) => {
-
-        updateStatus();
-
-        enable("server-action");
-
-        document.getElementById("command-dialog").close();
-
-    });
-
-    document.getElementById("ok-reset").addEventListener('click', async (e) => {
-
-        await command("configure");
-
-    });
-
-    document.getElementById("ok-regenerate").addEventListener('click', async (e) => {
-
-        await command("regenerate");
-
-    });
-
-    document.getElementById("command-button").addEventListener('click', async (e) => {
-
-        document.getElementById("command-dialog").showModal();
-
-    });
-
-    document.getElementById("cancel-command-dialog").addEventListener('click', async (e) => {
-
-        document.getElementById("command-dialog").close();
-
-    });
-
-    document.getElementById("refresh-button").addEventListener('click', async (e) => {
-
-        updateStatus();
-
-    });
-
-    document.getElementById("info-button").addEventListener('click', async (e) => {
-
-        renderjson.setShowToLevel(3);
-
-        try {
-            document.getElementById("wait-dialog").showModal();
-
-            var message = new Message();
-
-            var response = await message.report(
-                document.getElementById("datalake-url").value,
-                document.getElementById("datalake-namespace").value,
-                document.getElementById("datalake-userid").value,
-                document.getElementById("datalake-password").value,
-                document.getElementById("identity-url").value);
-
-                for (var column of response["response"]) {
-
-                console.log(column)
-
-                if (column["col"] == "json:tokens") {
-                    var tokens = JSON.parse(column["val"]);
-                    document.getElementById("token-view").replaceChildren();
-                    document.getElementById("token-view").appendChild(renderjson(tokens));
-
-                }
-        
             }
 
-            document.getElementById("wait-dialog").close();
+            xhttp.send();
 
-            document.getElementById("info-dialog").showModal();
+        });
 
-        } catch (exception) {
+    }.bind(this);
 
-            if (exception.trace) {
-                console.log(exception.trace);
-            } else {
-                console.log(exception);
+    this._report = function (datalakeUrl, datalakeNamespace, datalakeUserid, datalakePassword,
+        identityUrl) {
+
+        return new Promise((accept, reject) => {
+            let parmURL = `/report`
+
+            var xhttp = new XMLHttpRequest();
+
+            xhttp.open("GET", parmURL, true);
+
+            xhttp.setRequestHeader("datalake-url", datalakeUrl);
+            xhttp.setRequestHeader("datalake-namespace", datalakeNamespace);
+            xhttp.setRequestHeader("datalake-userid", datalakeUserid);
+            xhttp.setRequestHeader("datalake-password", datalakePassword);
+            xhttp.setRequestHeader("identity-url", identityUrl);
+  
+            xhttp.onreadystatechange = async function () {
+                xhttp.onload = function () {
+
+                    if (this.readyState === 4 && this.status === 200) {
+                        var response = JSON.parse(xhttp.response);
+
+                        accept({
+                            status: this.status,
+                            response: response
+                        });
+
+                    } else {
+
+                        reject({
+                            status: this.status,
+                            message: this.statusText
+                        });
+
+                    }
+
+                };
+
+                xhttp.onerror = function () {
+                };
+
             }
 
-            document.getElementById("wait-dialog").close();
-            showError(exception.message);
+            xhttp.send();
 
-        }
+        });
 
-    });
+    }.bind(this);
 
-    document.getElementById("execute-button").addEventListener('click', async (e) => {
+    this._monitor = function () {
 
-        document.getElementById("execute-dialog").showModal();
+        return new Promise((accept, reject) => {
+            let parmURL = `/monitor`;
 
-    });
+            var xhttp = new XMLHttpRequest();
 
-    document.getElementById("close-info-dialog").addEventListener('click', async (e) => {
+            xhttp.open("GET", parmURL, true);
 
-        document.getElementById("info-dialog").close();
+            xhttp.onreadystatechange = async function () {
+                xhttp.onload = function () {
 
-    });
+                    if (this.readyState === 4 && this.status === 200) {
+                        var response = JSON.parse(xhttp.response);
 
-    document.getElementById("ok-execute-dialog").addEventListener('click', async (e) => {
+                        accept({
+                            status: this.status,
+                            response: response
+                        });
 
-        try {
+                    } else {
 
-            var message = new Message();
+                        reject({
+                            status: this.status,
+                            message: this.statusText
+                        });
 
-            message.execute(
-                document.getElementById("datalake-url").value,
-                document.getElementById("datalake-namespace").value,
-                document.getElementById("datalake-userid").value,
-                document.getElementById("datalake-password").value,
-                document.getElementById("identity-url").value,
-                document.getElementById("identity-userid").value,
-                document.getElementById("identity-password").value,
-                document.getElementById("identity-clientid").value,
-                document.getElementById("identity-secret").value,
-                document.getElementById("thread-count").value,
-                document.getElementById("batch-size").value,
-                document.getElementById("checkpoint-count").value,
-                document.getElementById("page-size").value
-            );
+                    }
 
-            window.setTimeout(function () {
-                updateStatus();
-            }, 1000);
+                };
 
-            document.getElementById("execute-dialog").close();
+                xhttp.onerror = function () {
+                };
 
-        } catch (exception) {
-
-            if (exception.trace) {
-                console.log(exception.trace);
-            } else {
-                console.log(exception);
             }
 
-            document.getElementById("wait-dialog").close();
-            showError(exception.message);
+            xhttp.send();
 
-            window.setTimeout(function () {
-                updateStatus();
-            }, 1000);
+        });
 
-        }
+    }.bind(this);
 
-    });
+    this._execute = function (datalakeUrl, datalakeNamespace, datalakeUserid, datalakePassword,
+        identityUrl, identityUserid, identityPassword, identityClientId, identitySecret,
+        threads, batchsize, checkpoint, pagesize) {
 
-    document.getElementById("cancel-execute-dialog").addEventListener('click', async (e) => {
+        return new Promise((accept, reject) => {
+            let parmURL = `/execute?threads=${threads}&batch-size=${batchsize}&checkpoint=${checkpoint}&page-size=${pagesize}`
 
-        document.getElementById("execute-dialog").close();
+            var xhttp = new XMLHttpRequest();
 
-    });
+            xhttp.open("GET", parmURL, true);
 
-    document.getElementById(`thread-count`).addEventListener('input', function (event) {
-        var directory = window.directory;
-        document.getElementById(`thread-count-value`).innerHTML = event.target.value;
-    });
+            xhttp.setRequestHeader("datalake-url", datalakeUrl);
+            xhttp.setRequestHeader("datalake-namespace", datalakeNamespace);
+            xhttp.setRequestHeader("datalake-userid", datalakeUserid);
+            xhttp.setRequestHeader("datalake-password", datalakePassword);
+            xhttp.setRequestHeader("identity-url", identityUrl);
+            xhttp.setRequestHeader("identity-userid", identityUserid);
+            xhttp.setRequestHeader("identity-password", identityPassword);
+            xhttp.setRequestHeader("identity-clientid", identityClientId);
+            xhttp.setRequestHeader("identity-secret", identitySecret);
 
-    document.getElementById(`batch-size`).addEventListener('input', function (event) {
-        var directory = window.directory;
-        document.getElementById(`batch-size-value`).innerHTML = event.target.value;
-    });
+            xhttp.onreadystatechange = async function () {
+                xhttp.onload = function () {
 
-    document.getElementById(`checkpoint-count`).addEventListener('input', function (event) {
-        var directory = window.directory;
-        document.getElementById(`checkpoint-count-value`).innerHTML = event.target.value;
-    });
+                    if (this.readyState === 4 && this.status === 200) {
+                        var response = JSON.parse(xhttp.response);
 
-    document.getElementById(`page-size`).addEventListener('input', function (event) {
-        var directory = window.directory;
-        document.getElementById(`page-size-value`).innerHTML = event.target.value;
-    });
+                        accept({
+                            status: this.status,
+                            response: response
+                        });
 
-    document.getElementById(`command-dialog`).addEventListener('input', function (event) {
-        const container = document.getElementById('command-dialog');
-        const fields = container.querySelectorAll('input, select, textarea');
+                    } else {
 
-        var enabled = Array.from(fields).every(field => field.checkValidity());
+                        reject({
+                            status: this.status,
+                            message: this.statusText
+                        });
 
-        for (var button of container.getElementsByClassName('server-command')) {
-            button.disabled = !enabled;
-        }
+                    }
 
-    });
+                };
 
-    barchartThroughput = new BarChart("throughput-container", 24);
-    barchartRequests = new BarChart("executes-container", 24);
-    barchartExecuteTime = new BarChart("execute-times-container", 24);
+                xhttp.onerror = function () {
+                };
 
-    var panelView = new PanelView("static/images/expand.svg", "static/images/contract.svg");
+            }
 
-    panelView.decorate("throughput-collapse", "throughput-collapse-image", "throughput-container", true);
-    panelView.decorate("executes-collapse", "executes-collapse-image", "executes-container", true);
-    panelView.decorate("execute-times-collapse", "execute-times-collapse-image", "execute-times-container", true);
+            xhttp.send();
 
-    activateTabs('configuration-tabs', 'datalake-panel', 'configuration-tab1');
-    activateTabs('info-tabs', 'summary-panel', 'info-tab1');
+        });
 
-    document.getElementById("command-dialog").showModal();
+    }.bind(this);
+
+}
+
+Message.prototype.command = function (datalakeUrl, datalakeNamespace,
+    datalakeUserid, datalakePassword,
+    identityUrl, identityUserid, identityPassword,
+    identityClientId, identitySecret,
+    action) {
+    console.log(`[${action}] Userid: ${identityUserid}`)
+
+    return this._command(datalakeUrl, datalakeNamespace,
+        datalakeUserid, datalakePassword,
+        identityUrl, identityUserid, identityPassword,
+        identityClientId, identitySecret,
+        action);
+
+}
+
+Message.prototype.reset = function (datalakeUrl, datalakeNamespace,
+    datalakeUserid, datalakePassword,
+    identityUrl, identityUserid, identityPassword,
+    identityClientId, identitySecret) {
+    console.log(`Userid: ${identityUserid} - Password: ${identityPassword}`)
+
+    return this._command(datalakeUrl, datalakeNamespace,
+        datalakeUserid, datalakePassword,
+        identityUrl, identityUserid, identityPassword,
+        identityClientId, identitySecret,
+        "reset");
+
+}
+
+Message.prototype.regenerate = function (datalakeUrl, datalakeNamespace,
+    datalakeUserid, datalakePassword,
+    identityUrl, identityUserid, identityPassword,
+    identityClientId, identitySecret) {
+ 
+    return this._command(datalakeUrl, datalakeNamespace,
+        datalakeUserid, datalakePassword,
+        identityUrl, identityUserid, identityPassword,
+        identityClientId, identitySecret,
+        "regenerate");
+
+}
+
+
+Message.prototype.report = function (datalakeUrl, datalakeNamespace,
+    datalakeUserid, datalakePassword,
+    identityUrl) {
+ 
+    return this._report(datalakeUrl, datalakeNamespace,
+        datalakeUserid, datalakePassword,
+        identityUrl);
+
+}
+
+Message.prototype.execute = function (datalakeUrl, datalakeNamespace,
+    datalakeUserid, datalakePassword,
+    identityUrl, identityUserid, identityPassword,
+    identityClientId, identitySecret,
+    threads, batchsize, checkpoint, pagesize) {
+  
+    return this._execute(datalakeUrl, datalakeNamespace,
+        datalakeUserid, datalakePassword,
+        identityUrl, identityUserid, identityPassword,
+        identityClientId, identitySecret,
+        threads, batchsize, checkpoint, pagesize);
+
+}
+
+Message.prototype.monitor = function () {
+
+    return this._monitor();
 
 }
