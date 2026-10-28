@@ -73,6 +73,8 @@ class Accessor:
         refresh_token = credential["tokens"]["refresh_token"]
         token_endpoint = credential["urls"]["token_endpoint"]
 
+        print(json.dumps(credential["tokens"]))
+
         session = self.get_session()
     
         headers = {"content-type": "application/x-www-form-urlencoded"}
