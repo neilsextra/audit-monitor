@@ -43,19 +43,6 @@ app.register_blueprint(views)
 
 @app.route("/command", methods=["GET"])
 def get_command():
-    
-    datalake_url = request.headers.get('datalake-url')
-    datalake_namespace = request.headers.get('datalake-namespace')
-    datalake_userid = request.headers.get('datalake-userid')
-    datalake_password = request.headers.get('datalake-password')
-    
-    identity_url = request.headers.get('identity-url')
-    identity_userid = request.headers.get('identity-userid')
-    identity_password = request.headers.get('identity-password')
-    identity_clientid = request.headers.get('identity-clientid')
-    identity_secret = request.headers.get('identity-secret')
-
-    command_action = request.values.get('configure_action', 'configure')
 
     return command.action(
     {
@@ -64,10 +51,26 @@ def get_command():
             "datalake_userid": request.headers.get('datalake-userid'),
             "datalake_password": request.headers.get('datalake-password'), 
             "identity_url": request.headers.get('identity-url'),
+            "identity_userid": request.headers.get('identity-userid'),
+            "identity_password": request.headers.get('identity-userid'),
             "identity_client": request.headers.get('identity-clientid'),
             "identity_secret": request.headers.get('identity-secret')
         },
         request.values.get('configure_action', 'configure'))
+
+
+@app.route("/report", methods=["GET"])
+def get_report():
+
+    return command.report(
+    {
+            "datalake_url": request.headers.get('datalake-url'),
+            "datalake_namespace": request.headers.get('datalake-namespace'),
+            "datalake_userid": request.headers.get('datalake-userid'),
+            "datalake_password": request.headers.get('datalake-password'), 
+            "identity_url": request.headers.get('identity-url'),
+            "host_name":  urlparse(request.headers.get('identity-url')).hostname
+    })
         
 @app.route("/monitor", methods=["GET"])
 def get_monitor():
