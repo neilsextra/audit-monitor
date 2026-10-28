@@ -115,17 +115,17 @@ async function updateStatus() {
         cell.innerHTML = entry.message;
 
     }
-    
+
     var counters = response.response.counters;
     var currentHour = new Date(Date.now()).getHours();
 
     barchartThroughput.setOptimumScale(counters.throughput);
- 
+
     barchartRequests.setOptimumScale(counters.requests);
     barchartExecuteTime.setOptimumScale(counters.times);
 
     barchartThroughput.draw(counters.throughput, currentHour, "#008080", "#ccffff", 2);
-  
+
     barchartRequests.draw(counters.requests, currentHour, "#008080", "#ccffff", 0);
     barchartExecuteTime.draw(counters.times, currentHour, "#008080", "#ccffff", 0);
 
@@ -253,16 +253,70 @@ window.onload = async function () {
 
     });
 
+    document.getElementById("info-button").addEventListener('click', async (e) => {
+
+        renderjson.setShowToLevel(3);
+
+        try {
+            document.getElementById("wait-dialog").showModal();
+
+            var message = new Message();
+
+            var response = await message.report(
+                document.getElementById("datalake-url").value,
+                document.getElementById("datalake-namespace").value,
+                document.getElementById("datalake-userid").value,
+                document.getElementById("datalake-password").value,
+                document.getElementById("identity-url").value);
+
+                for (var column of response["response"]) {
+
+                console.log(column)
+
+                if (column["col"] == "json:tokens") {
+                    var tokens = JSON.parse(column["val"]);
+                    document.getElementById("token-view").replaceChildren();
+                    document.getElementById("token-view").appendChild(renderjson(tokens));
+
+                }
+        
+            }
+
+            document.getElementById("wait-dialog").close();
+
+            document.getElementById("info-dialog").showModal();
+
+        } catch (exception) {
+
+            if (exception.trace) {
+                console.log(exception.trace);
+            } else {
+                console.log(exception);
+            }
+
+            document.getElementById("wait-dialog").close();
+            showError(exception.message);
+
+        }
+
+    });
+
     document.getElementById("execute-button").addEventListener('click', async (e) => {
 
         document.getElementById("execute-dialog").showModal();
 
     });
 
+    document.getElementById("close-info-dialog").addEventListener('click', async (e) => {
+
+        document.getElementById("info-dialog").close();
+
+    });
+
     document.getElementById("ok-execute-dialog").addEventListener('click', async (e) => {
 
         try {
- 
+
             var message = new Message();
 
             message.execute(
@@ -282,7 +336,7 @@ window.onload = async function () {
             );
 
             window.setTimeout(function () {
-                 updateStatus();
+                updateStatus();
             }, 1000);
 
             document.getElementById("execute-dialog").close();
@@ -299,7 +353,7 @@ window.onload = async function () {
             showError(exception.message);
 
             window.setTimeout(function () {
-                 updateStatus();
+                updateStatus();
             }, 1000);
 
         }
@@ -355,6 +409,7 @@ window.onload = async function () {
     panelView.decorate("execute-times-collapse", "execute-times-collapse-image", "execute-times-container", true);
 
     activateTabs('configuration-tabs', 'datalake-panel', 'configuration-tab1');
+    activateTabs('info-tabs', 'summary-panel', 'info-tab1');
 
     document.getElementById("command-dialog").showModal();
 
