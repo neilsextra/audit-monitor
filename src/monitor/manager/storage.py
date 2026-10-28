@@ -172,5 +172,6 @@ class Storage:
                     
         else:
             print(f"Row not found or error: {response.status_code}")
+            return [], 400
 
-        return values
+        return values, 200
