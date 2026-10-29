@@ -13,53 +13,56 @@ class Command:
     
     def set_logger(self, logger):
         self.logger = logger
-
+        self.accessor.set_logger(logger)
+        self.storage.set_logger(logger)
+ 
     def action(self, parameters, action):
         result = {}
-         
+
+        self.monitor.message(f"[command] processing command {action} ...")
+        
         try:
-            self.logger.info(f'configure [datalake]: [{parameters["datalake_url"]}] : [{parameters["datalake_namespace"]} : {parameters["datalake_userid"]}')
-            self.logger.info(f'configure [identity]: [{parameters["identity_url"]} : [{parameters["identity_userid"]}] : [{parameters["identity_clientid"]}')
             
-            response_get_tokens = self.accessor.get_tokens(parameters["identity_url"], 
-                                                            parameters["identity_userid"], 
-                                                            parameters["identity_password"],  
-                                                            parameters["identity_clientid"], 
-                                                            parameters["identity_secret"])
-    
+            response_get_tokens, status_code = self.accessor.get_tokens(parameters["identity_url"], 
+                                                           parameters["identity_userid"], 
+                                                           parameters["identity_password"],  
+                                                           parameters["identity_client"], 
+                                                           parameters["identity_secret"])
+
+            del response_get_tokens["tokens"]["access_token"]
             result["control"] = response_get_tokens
-            status = ""
+            status = "OK"
     
-            if (int(response_get_tokens["status_code"]) in [200, 201]):
-                host_name = urlparse(parameters["identity_url"]).hostname
+            if (status_code in [200, 201]):
+                host_name = urlparse(parameters["identity_url"]).hostname  
     
-                self.logger.info(f'configure [host]: [{host_name}]')
-    
+                if action == "reset":
+                    self.storage.drop_table(parameters["datalake_url"], 
+                                            parameters["datalake_namespace"], 
+                                            parameters["datalake_userid"], 
+                                            parameters["datalake_password"], 
+                                            host_name)
+                    self.monitor.message(f"[{action}] table - '{host_name}' dropped")
+
                 if not self.storage.table_exists(parameters["datalake_url"], 
-                                                 parameters["datalake_namespace"], 
-                                                 parameters["datalake_userid"], 
-                                                 parameters["datalake_password"], 
-                                                 host_name):
-                    self.monitor.message(f"[{action}] Datalake table - '{host_name}' exists")
-    
-                    if action == "reset":
-                        self.storage.drop_table(parameters["datalake_url"], 
-                                                parameters["datalake_namespace"], 
-                                                parameters["datalake_userid"], 
-                                                parameters["datalake_password"], 
-                                                host_name)
-                        self.monitor.message(f"[{action}] Datalake table - '{host_name}' dropped")
-                    
+                                                                 parameters["datalake_namespace"], 
+                                                                 parameters["datalake_userid"], 
+                                                                 parameters["datalake_password"], 
+                                                                 host_name):
+                    self.monitor.message(f"[{action}] table - '{host_name}' exists")
                     self.storage.create_table(parameters["datalake_url"], 
                                                 parameters["datalake_namespace"], 
                                                 parameters["datalake_userid"], 
                                                 parameters["datalake_password"], 
                                                 host_name, "json")
-                    self.monitor.message(f"[{action}] Datalake table - '{host_name}' created")
+                                                
+                    self.monitor.message(f"[{action}] table - '{host_name}' created")
     
                     status = "table-created"
                 else:
                     status = "table-exists"
+
+                print(json.dumps(result))
 
                 result["token-time"] = int(time.time())
     
@@ -69,11 +72,11 @@ class Command:
                                      parameters["datalake_password"], 
                                      host_name, 
                                      Command.CONFIGURATION_ROW, 
-                                     "json", "service", json.dumps(result))
+                                     "json", "control", json.dumps(result))
 
                 result["status"] = status
 
-                self.monitor.message(f"[{action}] Datalake table - '{host_name}' put token")
+                self.monitor.message(f"[{action}] table - '{host_name}' put token")
     
                 if action in ['configure', 'reset']:
                     self.storage.put_row(parameters["datalake_url"], 
@@ -86,13 +89,12 @@ class Command:
                         'time': 0
                     }))
                     
-                    self.monitor.message(f"[{action}] Datalake table - '{host_name}' updated token")
-                    
+                    self.monitor.message(f"[{action}] table - '{host_name}' updated token")     
                     
                 return json.dumps(result, sort_keys=True), 200
     
             else:
-                result["tokens"] = response_get_tokens
+                result["control"] = response_get_tokens
 
                 return json.dumps(result, sort_keys=True), int(response_get_tokens["status_code"])         
         
@@ -112,4 +114,4 @@ class Command:
                                               parameters["host_name"],
                                               Command.CONFIGURATION_ROW)  
 
-        return config, status_code         
+        return config, status_code             
