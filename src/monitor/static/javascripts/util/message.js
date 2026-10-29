@@ -1,62 +1,249 @@
-/**
- * Inactivate Tabs
- * 
- */
-function inactivateTabs(group) {
-    var iTab, tabcontent, tabbuttons, tablinks;
+function Message() {
 
-    // Get all elements with class="tabcontent" and hide them
-    tabcontent = document.getElementById(group).querySelectorAll(".tabcontent");
+    this._command = function (datalakeUrl, datalakeNamespace, datalakeUserid, datalakePassword,
+        identityUrl, identityUserid, identityPassword, identityClient, identitySecret,
+        command) {
 
-    for (iTab = 0; iTab < tabcontent.length; iTab++) {
-        tabcontent[iTab].style.display = "none";
-    }
+        return new Promise((accept, reject) => {
+            let parmURL = `/command?action=${encodeURIComponent(command)}`
 
-    // Get all elements with class="tablinks" and remove the class "active"
-    tablinks = document.getElementById(group).querySelectorAll(".tablinks");
-    for (iTab = 0; iTab < tablinks.length; iTab++) {
-        tablinks[iTab].className = tablinks[iTab].className.replace(" active", "");
-        tablinks[iTab].style.textDecoration = "none";
-    }
+            console.log(`[message] - identity-client: ${identityClient}`);
+
+            var xhttp = new XMLHttpRequest();
+
+            xhttp.open("GET", parmURL, true);
+
+            xhttp.setRequestHeader("datalake-url", datalakeUrl);
+            xhttp.setRequestHeader("datalake-namespace", datalakeNamespace);
+            xhttp.setRequestHeader("datalake-userid", datalakeUserid);
+            xhttp.setRequestHeader("datalake-password", datalakePassword);
+            xhttp.setRequestHeader("identity-url", identityUrl);
+            xhttp.setRequestHeader("identity-userid", identityUserid);
+            xhttp.setRequestHeader("identity-password", identityPassword);
+            xhttp.setRequestHeader("identity-client", identityClient);
+            xhttp.setRequestHeader("identity-secret", identitySecret);
+
+            xhttp.onreadystatechange = async function () {
+                xhttp.onload = function () {
+
+                    if (this.readyState === 4 && this.status === 200) {
+                        var response = JSON.parse(xhttp.response);
+
+                        accept({
+                            status: this.status,
+                            response: response
+                        });
+
+                    } else {
+
+                        reject({
+                            status: this.status,
+                            message: this.statusText
+                        });
+
+                    }
+
+                };
+
+                xhttp.onerror = function () {
+                };
+
+            }
+
+            xhttp.send();
+
+        });
+
+    }.bind(this);
+
+    this._report = function (datalakeUrl, datalakeNamespace, datalakeUserid, datalakePassword,
+        identityUrl) {
+
+        return new Promise((accept, reject) => {
+            let parmURL = `/report`
+
+            var xhttp = new XMLHttpRequest();
+
+            xhttp.open("GET", parmURL, true);
+
+            xhttp.setRequestHeader("datalake-url", datalakeUrl);
+            xhttp.setRequestHeader("datalake-namespace", datalakeNamespace);
+            xhttp.setRequestHeader("datalake-userid", datalakeUserid);
+            xhttp.setRequestHeader("datalake-password", datalakePassword);
+            xhttp.setRequestHeader("identity-url", identityUrl);
+  
+            xhttp.onreadystatechange = async function () {
+                xhttp.onload = function () {
+
+                    if (this.readyState === 4 && this.status === 200) {
+                        var response = JSON.parse(xhttp.response);
+
+                        accept({
+                            status: this.status,
+                            response: response
+                        });
+
+                    } else {
+
+                        reject({
+                            status: this.status,
+                            message: this.statusText
+                        });
+
+                    }
+
+                };
+
+                xhttp.onerror = function () {
+                };
+
+            }
+
+            xhttp.send();
+
+        });
+
+    }.bind(this);
+
+    this._monitor = function () {
+
+        return new Promise((accept, reject) => {
+            let parmURL = `/monitor`;
+
+            var xhttp = new XMLHttpRequest();
+
+            xhttp.open("GET", parmURL, true);
+
+            xhttp.onreadystatechange = async function () {
+                xhttp.onload = function () {
+
+                    if (this.readyState === 4 && this.status === 200) {
+                        var response = JSON.parse(xhttp.response);
+
+                        accept({
+                            status: this.status,
+                            response: response
+                        });
+
+                    } else {
+
+                        reject({
+                            status: this.status,
+                            message: this.statusText
+                        });
+
+                    }
+
+                };
+
+                xhttp.onerror = function () {
+                };
+
+            }
+
+            xhttp.send();
+
+        });
+
+    }.bind(this);
+
+    this._execute = function (datalakeUrl, datalakeNamespace, datalakeUserid, datalakePassword,
+        identityUrl, identityUserid, identityPassword, identityClient, identitySecret,
+        threads, batchsize, checkpoint, pagesize) {
+
+        return new Promise((accept, reject) => {
+            let parmURL = `/execute?threads=${threads}&batch-size=${batchsize}&checkpoint=${checkpoint}&page-size=${pagesize}`
+
+            var xhttp = new XMLHttpRequest();
+
+            xhttp.open("GET", parmURL, true);
+
+            xhttp.setRequestHeader("datalake-url", datalakeUrl);
+            xhttp.setRequestHeader("datalake-namespace", datalakeNamespace);
+            xhttp.setRequestHeader("datalake-userid", datalakeUserid);
+            xhttp.setRequestHeader("datalake-password", datalakePassword);
+            xhttp.setRequestHeader("identity-url", identityUrl);
+            xhttp.setRequestHeader("identity-userid", identityUserid);
+            xhttp.setRequestHeader("identity-password", identityPassword);
+            xhttp.setRequestHeader("identity-client", identityClient);
+            xhttp.setRequestHeader("identity-secret", identitySecret);
+
+            xhttp.onreadystatechange = async function () {
+                xhttp.onload = function () {
+
+                    if (this.readyState === 4 && this.status === 200) {
+                        var response = JSON.parse(xhttp.response);
+
+                        accept({
+                            status: this.status,
+                            response: response
+                        });
+
+                    } else {
+
+                        reject({
+                            status: this.status,
+                            message: this.statusText
+                        });
+
+                    }
+
+                };
+
+                xhttp.onerror = function () {
+                };
+
+            }
+
+            xhttp.send();
+
+        });
+
+    }.bind(this);
 
 }
 
-/**
- * Show the Active Tab
- * 
- * @param {*} evt the Tab to Show
- * @param {String} group the group name of the Tab
- * @param {String} tab the name of the Tab
- * @param {String} button the Tab's button
- */
-function showTab(evt, group, tab, button) {
+Message.prototype.command = function (datalakeUrl, datalakeNamespace,
+    datalakeUserid, datalakePassword,
+    identityUrl, identityUserid, identityPassword,
+    identityClient, identitySecret,
+    action) {
+    console.log(`[${action}] Userid: ${identityUserid}`)
 
-    inactivateTabs(group);
-
-    // Show the current tab, and add an "active" class to the button that opened the tab
-    document.getElementById(tab).style.display = "block";
-    document.getElementById(button).style.textDecoration = "underline";
-
-    if (evt != null && evt.currentTarget != null) {
-        evt.currentTarget.className += " active";
-    }
+    return this._command(datalakeUrl, datalakeNamespace,
+        datalakeUserid, datalakePassword,
+        identityUrl, identityUserid, identityPassword,
+        identityClient, identitySecret,
+        action);
 
 }
 
-/**
- * Active a nominated Tab
- * 
- * @param {String} group the group name of the Tab
- * @param {String} panel the panel to show
- * @param {String} tab the Tab's button
- */
-function activateTabs(group, tab, button) {
+Message.prototype.report = function (datalakeUrl, datalakeNamespace,
+    datalakeUserid, datalakePassword,
+    identityUrl) {
+ 
+    return this._report(datalakeUrl, datalakeNamespace,
+        datalakeUserid, datalakePassword,
+        identityUrl);
 
-    inactivateTabs(group);
+}
 
-    // Show the current tab, and add an "active" class to the button that opened the tab
-    document.getElementById(tab).style.display = "block";
-    document.getElementById(button).style.textDecoration = "underline";
-    document.getElementById(button).className += " active";
+Message.prototype.execute = function (datalakeUrl, datalakeNamespace,
+    datalakeUserid, datalakePassword,
+    identityUrl, identityUserid, identityPassword,
+    identityClient, identitySecret,
+    threads, batchsize, checkpoint, pagesize) {
+  
+    return this._execute(datalakeUrl, datalakeNamespace,
+        datalakeUserid, datalakePassword,
+        identityUrl, identityUserid, identityPassword,
+        identityClient, identitySecret,
+        threads, batchsize, checkpoint, pagesize);
+
+}
+
+Message.prototype.monitor = function () {
+
+    return this._monitor();
 
 }
