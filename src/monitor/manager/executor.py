@@ -122,7 +122,7 @@ class Executor:
                 column_values = json.loads(column["val"])            
                 checkpoint_time = column_values["time"]
 
-            elif column["col"] == "json:service":
+            elif column["col"] == "json:control":
                 rest_service = json.loads(column["val"])
                 credential = {
                             "tokens" : rest_service["control"]["tokens"],
@@ -161,7 +161,7 @@ class Executor:
                 processInfo = json.dumps(request)
                 task_queue.put(processInfo)
                 checkpoint_time = request['creationTime']
-                print(checkpoint_time)
+                print(f"Checkpoint time : {checkpoint_time}")
         
             if returned != parameters["page_size"]: 
                 break
