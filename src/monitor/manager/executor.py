@@ -115,7 +115,7 @@ class Executor:
         if status_code not in [200, 201]:
             return
 
-        checkpoint_time = None
+        checkpoint_time = 0
  
         for column in config:
             if column["col"] == "json:checkpoint":
@@ -140,7 +140,7 @@ class Executor:
         total = 0
         returned = 0
 
-        checkpoint_time = None
+        checkpoint_time = 0
 
         while True:  
             response = self.accessor.retrieve_requests(parameters["identity_url"], 
@@ -160,8 +160,9 @@ class Executor:
             for request in response["requests"]:
                 processInfo = json.dumps(request)
                 task_queue.put(processInfo)
-                checkpoint_time = request['creationTime']
-                print(f"Checkpoint time : {checkpoint_time}")
+                print(f"Checkpoint time : {checkpoint_time} : {request['creationTime']}")
+                        
+                checkpoint_time = request['creationTime'] if request['creationTime'] > checkpoint_time else checkpoint_time
         
             if returned != parameters["page_size"]: 
                 break
@@ -174,9 +175,9 @@ class Executor:
         for thread in threads:
             thread.join()
 
-        if (checkpoint_time != None):
-            self.checkpointer.finalize(parameters, checkpoint_time)
-            self.monitor.message(f"[retrieve]: checkpoint written - {checkpoint_time}") 
+
+        self.checkpointer.finalize(parameters, checkpoint_time)
+        self.monitor.message(f"[retrieve]: checkpoint written - {checkpoint_time}") 
 
         self.monitor.message(f"[retrieve]: task completed")    
 
