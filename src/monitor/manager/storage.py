@@ -61,9 +61,9 @@ class Storage:
         self.logger.info(f"response: {response.status_code}")
 
         if int(response.status_code) in [200, 201]:
-            self.monitor.message(f"Table '{full_table_name}' created successfully") 
+            self.monitor.message(f"[storage] table - '{full_table_name}' created successfully") 
         else:
-            self.monitor.message(f"Failed to create table: {response.status_code} - {response.text}") 
+            self.monitor.message(f"[storage] table - '{full_table_name} -  creation failed {response.status_code} : {response.text}") 
  
         return response
 
@@ -79,9 +79,9 @@ class Storage:
         self.logger.info(f"response: {response.status_code}")
 
         if int(response.status_code) in [200, 201]:
-            print(f"Table '{full_table_name}' dropped successfully.")
+            self.logger.info(f"Table '{full_table_name}' dropped successfully.")
         else:
-            print(f"Failed to create table: {response.status_code} - {response.text}")
+            self.logger.info(f"Failed to create table: {response.status_code} - {response.text}")
         return response
 
     def put_row(self, base_url:str,  name_space:str, userid:str, password:str,table_name:str, row_key: str, column_family:str, column_qualifier:str, value:str):
@@ -106,14 +106,13 @@ class Storage:
         response = requests.put(url, headers=headers, auth=(userid, password),  json=payload, verify=False)
         
         if int(response.status_code) == 200:
-            print(f"Successfully inserted row '{row_key}'.")
             self.monitor.inc_counter(Monitor.PUTS)
         else:
-            print(f"Failed to insert data: {response.status_code} - {response.text}")
+            self.monitor.info(f"[storage] failed to insert row: {response.status_code} - {response.text}")
  
     def bulk_put_row(self, base_url:str, name_space:str, table_name:str, userid:str, password:str, values:str):
         url = f"{base_url}/{name_space}:{table_name}/false-row-key" 
-        print(f"URL: {json.dumps(url)} - {userid} - {password}")
+ 
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
         rows = []
 
@@ -136,16 +135,14 @@ class Storage:
         payload = {
             "Row": rows
         }
-        
-    #    print(json.dumps(payload))
 
         response = requests.put(url, headers=headers, auth=(userid, password),  json=payload, verify=False)
     
         if int(response.status_code) == 200:
             self.monitor.add_counter(Monitor.PUTS, len(rows))
-            print(f"Successfully inserted rows: {len(rows)}")
+            self.monitor.info(f"[storage] successfully inserted rows: {len(rows)}")
         else:
-            print(f"Failed to insert rows: {response.status_code} - {response.text}")
+            self.monitor.info(f"[storage] failed to insert rows: {response.status_code} - {response.text}")
  
     def get_row(self, base_url:str, userid:str, password:str, name_space:str, table_name:str, row_key: str):
 
@@ -171,7 +168,6 @@ class Storage:
                     })
                     
         else:
-            print(f"Row not found or error: {response.status_code}")
             return [], 400
 
         return values, 200
