@@ -108,7 +108,7 @@ class Storage:
         if int(response.status_code) == 200:
             self.monitor.inc_counter(Monitor.PUTS)
         else:
-            self.monitor.info(f"[storage] failed to insert row: {response.status_code} - {response.text}")
+            self.monitor.message(f"[storage] failed to insert row: {response.status_code} - {response.text}")
  
     def bulk_put_row(self, base_url:str, name_space:str, table_name:str, userid:str, password:str, values:str):
         url = f"{base_url}/{name_space}:{table_name}/false-row-key" 
@@ -140,9 +140,8 @@ class Storage:
     
         if int(response.status_code) == 200:
             self.monitor.add_counter(Monitor.PUTS, len(rows))
-            self.monitor.info(f"[storage] successfully inserted rows: {len(rows)}")
         else:
-            self.monitor.info(f"[storage] failed to insert rows: {response.status_code} - {response.text}")
+            self.monitor.message(f"[storage] failed to insert rows: {response.status_code} - {response.text}")
  
     def get_row(self, base_url:str, userid:str, password:str, name_space:str, table_name:str, row_key: str):
 
