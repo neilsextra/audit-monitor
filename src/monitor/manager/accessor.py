@@ -40,17 +40,17 @@ class Accessor:
 
         return session
     
-    def get_tokens(self, url, userid, password, clientid, secret):
+    def get_tokens(self, url, userid, password, client, secret):
         session = self.get_session()
         urls = self.get_urls(session, url)
 
         parsed_url = urlparse(url)
 
-        self.logger.info(f"token_endpoint={urls["token_endpoint"]}, userid={userid}, password={password}, clientid={clientid}, secret={secret}")
+        self.logger.info(f"token_endpoint={urls["token_endpoint"]}, userid={userid}, password={password}, client={client}, secret={secret}")
  
         headers = {"content-type": "application/x-www-form-urlencoded"}
         payload = {"grant_type": "password", "username": userid, "password": password}
-        response = session.post(urls["token_endpoint"], headers=headers, data=payload, verify=False, auth=(clientid, secret))
+        response = session.post(urls["token_endpoint"], headers=headers, data=payload, verify=False, auth=(client, secret))
 
         if response.status_code == 500:
             self.monitor.message(f"[command] generated tokens - failed - {response.status_code}") 
@@ -63,17 +63,13 @@ class Accessor:
         return {
             "url": url,
             "netloc": parsed_url.netloc,
-            "status_code" : response.status_code,
             "tokens" : tokens, 
-            "userid": userid,
-            "urls" : urls}
+            "urls" : urls}, 200
 
     def refresh_token(self, client, secret, credential):
 
         refresh_token = credential["tokens"]["refresh_token"]
         token_endpoint = credential["urls"]["token_endpoint"]
-
-        print(json.dumps(credential["tokens"]))
 
         session = self.get_session()
     
@@ -81,6 +77,9 @@ class Accessor:
         payload = {"grant_type": "refresh_token", "refresh_token": refresh_token}
 
         response = session.post(token_endpoint, headers=headers, data=payload, verify=False, auth=(client, secret))
+
+        if (response.status_code not in [200, 201]):
+            raise ValueError(f"[refresh_token] failed - {response.status_code}: {response.text}")
  
         return token_endpoint, json.loads(response.text)
 
@@ -93,21 +92,21 @@ class Accessor:
  
         url, token = self.refresh_token(client, secret, credential)
 
-        headers = {"Authorization": token['token_type'] + " " + token["access_token"], "Content-Type": "application/json"}
+        headers = {"Authorization": token["token_type"] + " " + token["access_token"], "Content-Type": "application/json"}
         
         session = self.get_session()
-       
+    
         params = {"userDn": dn}
 
         response = session.get(url_base + Accessor.DN_DETAILS_URL, params=params, headers=headers, verify=False)
 
         return { "status_code" : response.status_code,
-                 "reason" : response.reason,
-                 "response": response.text
+                "reason" : response.reason,
+                "response": response.text
         }
 
     def get_requests(self, url_base:str, client:str, secret, credential, dn:str):
-        url, token = self.refresh_token(client, secret, credential)
+        url, token, status_code = self.refresh_token(client, secret, credential)
 
         headers = {"Authorization": token["token_type"] + " " + token["access_token"], "Content-Type": "application/json"}
         session = self.get_session()        
@@ -124,7 +123,7 @@ class Accessor:
              
         url, token = self.refresh_token(client, secret, credential)
 
-        headers = {"Authorization": token['token_type'] + " " + token["access_token"], "Content-Type": "application/json"}
+        headers = {"Authorization": token["token_type"] + " " + token["access_token"], "Content-Type": "application/json"}
         session = self.get_session()
         payload = {"id": id, "entityType": "prd"}
 
