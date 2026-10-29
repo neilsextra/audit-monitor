@@ -136,22 +136,18 @@ class Executor:
             thread.start()
             threads.append(thread)
 
-        start = 0
         total = 0
         returned = 0
-
-        checkpoint_time = 0
 
         while True:  
             response = self.accessor.retrieve_requests(parameters["identity_url"], 
                                                     parameters["identity_client"], 
                                                     parameters["identity_secret"], 
                                                     credential, 
-                                                    start, parameters["page_size"], 
+                                                    0, parameters["page_size"], 
                                                     checkpoint_time)
             returned = response["returned"]
             total += returned
-            start += parameters["page_size"]
 
             self.monitor.message(f"[retrieve]:  ({response["status_code"]}) - {parameters["page_size"]} - {returned} - {total} - {len(response["requests"])}")
 
