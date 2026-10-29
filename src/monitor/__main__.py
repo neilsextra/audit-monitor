@@ -52,11 +52,12 @@ def get_command():
             "datalake_password": request.headers.get('datalake-password'), 
             "identity_url": request.headers.get('identity-url'),
             "identity_userid": request.headers.get('identity-userid'),
-            "identity_password": request.headers.get('identity-userid'),
-            "identity_client": request.headers.get('identity-clientid'),
+            "identity_password": request.headers.get('identity-password'),
+            "identity_client": request.headers.get('identity-client'),
             "identity_secret": request.headers.get('identity-secret')
         },
-        request.values.get('configure_action', 'configure'))
+
+        request.values.get('action', 'configure'))
 
 
 @app.route("/report", methods=["GET"])
@@ -95,7 +96,7 @@ def get_execute():
             "datalake_userid": request.headers.get('datalake-userid'),
             "datalake_password": request.headers.get('datalake-password'), 
             "identity_url": request.headers.get('identity-url'),
-            "identity_client": request.headers.get('identity-clientid'),
+            "identity_client": request.headers.get('identity-client'),
             "identity_secret": request.headers.get('identity-secret'),
             "threads": int(request.values.get('threads', '10')),
             "batch_size": int(request.values.get('batch-size', '10')),
