@@ -26,12 +26,12 @@ class Monitor:
 
         self.start_time = time.time()
 
-        print(f"[monitor] - completed")
 
     def set_logger(self, logger):
         self.logger = logger
 
     def init(self):
+
         now = datetime.now()
 
         time_difference = abs(now - self.datetime)
@@ -45,7 +45,6 @@ class Monitor:
                
         if (self.datetime.hour != now.hour):
             for key, value in self.counters.items():
-                print(f"{now.hour} : {key}")
                 self.counters[key][now.hour] = 0
             
             self.datetime = now
@@ -62,11 +61,7 @@ class Monitor:
 
         self.add_counter(counter, 1)
 
-        print(f"Incremented counter '{counter}'")
-
     def message(self, message:str):
-        print(f"{time.time()}: {message}")
-
         self.logger.info(f"{message}")
  
         self.log = self.log[100:] if len(self.log) > 100 else self.log
