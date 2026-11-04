@@ -7,8 +7,6 @@ function Message() {
         return new Promise((accept, reject) => {
             let parmURL = `/command?action=${encodeURIComponent(command)}`
 
-            console.log(`[message] - identity-client: ${identityClient}`);
-
             var xhttp = new XMLHttpRequest();
 
             xhttp.open("GET", parmURL, true);
@@ -208,7 +206,6 @@ Message.prototype.command = function (datalakeUrl, datalakeNamespace,
     identityUrl, identityUserid, identityPassword,
     identityClient, identitySecret,
     action) {
-    console.log(`[${action}] Userid: ${identityUserid}`)
 
     return this._command(datalakeUrl, datalakeNamespace,
         datalakeUserid, datalakePassword,
