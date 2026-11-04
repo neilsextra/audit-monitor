@@ -7,4 +7,4 @@ COPY pylib/flask/ pylib/flask/
 
 EXPOSE 8080
 
-ENTRYPOINT ["python3", "-X", "pylib", "src/viewer", "pylib", "8080"]
+ENTRYPOINT ["python3", "-X", "pylib", "src/monitor", "pylib", "8080"]
