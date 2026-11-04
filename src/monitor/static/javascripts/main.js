@@ -276,7 +276,9 @@ window.onload = async function () {
                 } else if (column["col"] == "json:checkpoint") {
                     var checkpoint = JSON.parse(column["val"]);
 
-                    checkpoint["converted"] = formatTime(checkpoint["time"]);
+                    if (checkpoint["time"] !=0) {
+                        checkpoint["converted"] = formatTime(checkpoint["time"]);
+                    }
 
                     document.getElementById("checkpoint-view").replaceChildren();
                     document.getElementById("checkpoint-view").appendChild(renderjson(checkpoint));
