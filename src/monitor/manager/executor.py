@@ -156,7 +156,6 @@ class Executor:
             for request in response["requests"]:
                 processInfo = json.dumps(request)
                 task_queue.put(processInfo)
-                print(f"Checkpoint time : {checkpoint_time} : {request['creationTime']}")
                         
                 checkpoint_time = request['creationTime'] if request['creationTime'] > checkpoint_time else checkpoint_time
         
