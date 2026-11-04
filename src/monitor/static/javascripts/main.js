@@ -38,8 +38,6 @@ async function command(action) {
 
         var message = new Message();
 
-        console.log(`identity-client: ${document.getElementById("identity-client").value}`);
-
         var response = await message.command(
             document.getElementById("datalake-url").value,
             document.getElementById("datalake-namespace").value,
@@ -94,9 +92,6 @@ function enable(className, enable = true) {
 async function updateStatus() {
     var message = new Message();
     var response = await message.monitor();
-
-    console.log(JSON.stringify(response));
-
     var table = document.getElementById("log-messages");
 
     table.replaceChildren();
@@ -280,7 +275,9 @@ window.onload = async function () {
 
                 } else if (column["col"] == "json:checkpoint") {
                     var checkpoint = JSON.parse(column["val"]);
-                    console.log(checkpoint);
+
+                    checkpoint["converted"] = formatTime(checkpoint["time"]);
+
                     document.getElementById("checkpoint-view").replaceChildren();
                     document.getElementById("checkpoint-view").appendChild(renderjson(checkpoint));
 
