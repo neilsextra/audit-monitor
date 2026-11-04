@@ -3,6 +3,7 @@ import json
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from urllib.parse import urlparse
+import urllib3
 
 class Accessor:
 
@@ -32,6 +33,8 @@ class Accessor:
         return oaInfo
     
     def get_session(self):
+          
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         session = requests.Session()
         retry = Retry( total=100, connect=100, read=100, backoff_factor=0.5)
         adapter = HTTPAdapter(max_retries=retry)
