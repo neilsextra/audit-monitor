@@ -1,4 +1,4 @@
-FROM [server]/docker/openshift/ubi9/python-314:1-1779943392
+FROM registry-gitlab.csda.gov.au/ict-infra/docker/openshift/ubi9/python-314:1-1779943392
 
 COPY src/ src/
 
