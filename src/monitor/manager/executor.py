@@ -95,7 +95,7 @@ class Executor:
             self.monitor.add_counter(Monitor.THROUGHPUT, len(json.dumps(rows)))
             self.monitor.add_counter(Monitor.TIMES, (time.perf_counter() - start_timer) * 1000)           
 
-        self.monitor.message(f"[{worker_id}] worker - shutdown")
+        self.monitor.message(f"[{worker_id}] worker - shutdown completed")
 
         task_queue.task_done()
 
