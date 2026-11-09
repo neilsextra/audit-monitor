@@ -58,7 +58,7 @@ class Executor:
                         {
                         "column": {
                                 "family": "json",
-                                "qualifier": "summary",
+                                "qualifier": "history",
                                 "value": json.dumps(history)
                             }
                         }      
