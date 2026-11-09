@@ -85,12 +85,10 @@ class Storage:
             data = response.json()
             for row in data.get("Row", []):
                 key = Storage.b64_decode(row.get("key"))
-                print(f"Key: {key}")
-
+                
                 cells = []
                 for cell in row.get("Cell", []):
-                    # Decode column name and cell value
-
+     
                     cells.append(
                         {"col": Storage.b64_decode(cell.get("column")),
                          "val": Storage.b64_decode(cell.get("$"))
