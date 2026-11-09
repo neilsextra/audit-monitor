@@ -37,13 +37,13 @@ class Executor:
 
                 process = json.loads(request)
 
-                response = self.accessor.get_request_details(parameters["identity_url"], 
+                details = self.accessor.get_request_details(parameters["identity_url"], 
                                                             parameters["identity_client"],
                                                             parameters["identity_secret"], 
                                                             credential, 
                                                             process['requestId'])
                                 
-                history = json.loads(request)
+               
                 
                 rows.append({
                     "row_key": process['requestId'],
@@ -59,7 +59,7 @@ class Executor:
                         "column": {
                                 "family": "json",
                                 "qualifier": "history",
-                                "value": json.dumps(history)
+                                "value": details["response"]
                             }
                         }      
                     ]
