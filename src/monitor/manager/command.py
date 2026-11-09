@@ -89,7 +89,7 @@ class Command:
                         'time': 0
                     }))
                     
-                    self.monitor.message(f"[{action}] table - '{host_name}' updated token")     
+                    self.monitor.message(f"[{action}] table - '{host_name}' reset checkpoint")     
                     
                 return json.dumps(result, sort_keys=True), 200
     
