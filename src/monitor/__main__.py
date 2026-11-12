@@ -10,6 +10,7 @@ sys.path.insert(0, f"{Path.home()}{os.sep}pylib")
 from flask import Flask, Blueprint, render_template, request
 
 from logging.config import dictConfig
+import json
 from urllib.parse import urlparse
 from manager.container import Container
 
@@ -40,31 +41,83 @@ app = Flask(__name__)
 
 app.register_blueprint(views)
 
-@app.route("/status", methods=["GET"])
-def get_status():
+@app.route("/command", methods=["GET"])
+def get_command():
 
-    return command.status(
+    return command.action(
     {
             "datalake_url": request.headers.get('datalake-url'),
             "datalake_namespace": request.headers.get('datalake-namespace'),
             "datalake_userid": request.headers.get('datalake-userid'),
             "datalake_password": request.headers.get('datalake-password'), 
-            "datalake_table": request.headers.get('datalake-table')
-    })
+            "identity_url": request.headers.get('identity-url'),
+            "identity_userid": request.headers.get('identity-userid'),
+            "identity_password": request.headers.get('identity-password'),
+            "identity_client": request.headers.get('identity-client'),
+            "identity_secret": request.headers.get('identity-secret')
+        },
 
-@app.route("/search", methods=["GET"])
-def get_search():
+        request.values.get('action', 'regenerate'),
+        request.args.getlist('index'))
 
-    return command.search(
+
+@app.route("/report", methods=["GET"])
+def get_report():
+
+    return command.report(
     {
-        "datalake_url": request.headers.get('datalake-url'),
-        "datalake_namespace": request.headers.get('datalake-namespace'),
-        "datalake_userid": request.headers.get('datalake-userid'),
-        "datalake_password": request.headers.get('datalake-password'),
-        "datalake_table": request.headers.get('datalake-table'),
-        "row_filter": request.values.get('filter', '*').strip(),
-        "row_limit": request.values.get('limit', '10')
+            "datalake_url": request.headers.get('datalake-url'),
+            "datalake_namespace": request.headers.get('datalake-namespace'),
+            "datalake_userid": request.headers.get('datalake-userid'),
+            "datalake_password": request.headers.get('datalake-password'), 
+            "identity_url": request.headers.get('identity-url'),
+            "host_name":  urlparse(request.headers.get('identity-url')).hostname
     })
+        
+@app.route("/monitor", methods=["GET"])
+def get_monitor():
+
+    try:
+        return json.dumps(monitor.statistics(), sort_keys=True), 200
+    
+    except Exception as error:
+        app.logger.error(repr(error))
+        return json.dumps({
+            "text": repr(error)
+        }, sort_keys=True), 500
+   
+@app.route("/execute", methods=["GET"])
+def get_execute():
+
+    try:
+   
+        executor.execute({
+            "datalake_url": request.headers.get('datalake-url'),
+            "datalake_namespace": request.headers.get('datalake-namespace'),
+            "datalake_userid": request.headers.get('datalake-userid'),
+            "datalake_password": request.headers.get('datalake-password'), 
+            "identity_url": request.headers.get('identity-url'),
+            "identity_client": request.headers.get('identity-client'),
+            "identity_secret": request.headers.get('identity-secret'),
+            "threads": int(request.values.get('threads', '10')),
+            "batch_size": int(request.values.get('batch-size', '10')),
+            "checkpoint": int(request.values.get('checkpoint', '10')),
+            "page_size": int(request.values.get('page-size', '100')),
+            "host_name":  urlparse(request.headers.get('identity-url')).hostname
+        })
+
+        response = {
+            "status_code" : 200
+        }
+ 
+        return json.dumps(response, sort_keys=True), int(response["status_code"])
+    
+    except Exception as error:
+        app.logger.error(repr(error))
+        return json.dumps({
+            
+            "text": repr(error)
+        }, sort_keys=True), 500
     
 @app.route("/")
 def start():
@@ -75,13 +128,21 @@ def start():
 if __name__ == "__main__":
     container = Container()
 
+    accessor = container.accessor()
     storage = container.storage()
+    monitor = container.monitor()
+    executor = container.executor()
+    checkpointer = container.checkpointer()
     command = container.command()
-
+ 
+    accessor.set_logger(app.logger)
     storage.set_logger(app.logger)
+    monitor.set_logger(app.logger)
+    executor.set_logger(app.logger)
+    checkpointer.set_logger(app.logger)
     command.set_logger(app.logger)
 
-    app.logger.info("[main] Audit Monitor - started...")
+    monitor.message("[main] Audit Monitor - started...")
    
     port = 8080
 
