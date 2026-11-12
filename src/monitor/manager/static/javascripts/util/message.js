@@ -1,11 +1,15 @@
 function Message() {
 
     this._command = function (datalakeUrl, datalakeNamespace, datalakeUserid, datalakePassword,
-        identityUrl, identityUserid, identityPassword, identityClientId, identitySecret,
-        command) {
+        identityUrl, identityUserid, identityPassword, identityClient, identitySecret,
+        command, args) {
 
         return new Promise((accept, reject) => {
             let parmURL = `/command?action=${encodeURIComponent(command)}`
+
+            for (var arg of args) {
+                parmURL += `&${encodeURIComponent(arg["name"])}=${encodeURIComponent(arg["value"])}`;
+            }
 
             var xhttp = new XMLHttpRequest();
 
@@ -18,9 +22,58 @@ function Message() {
             xhttp.setRequestHeader("identity-url", identityUrl);
             xhttp.setRequestHeader("identity-userid", identityUserid);
             xhttp.setRequestHeader("identity-password", identityPassword);
-            xhttp.setRequestHeader("identity-clientid", identityClientId);
+            xhttp.setRequestHeader("identity-client", identityClient);
             xhttp.setRequestHeader("identity-secret", identitySecret);
 
+            xhttp.onreadystatechange = async function () {
+                xhttp.onload = function () {
+
+                    if (this.readyState === 4 && this.status === 200) {
+                        var response = JSON.parse(xhttp.response);
+
+                        accept({
+                            status: this.status,
+                            response: response
+                        });
+
+                    } else {
+
+                        reject({
+                            status: this.status,
+                            message: this.statusText
+                        });
+
+                    }
+
+                };
+
+                xhttp.onerror = function () {
+                };
+
+            }
+
+            xhttp.send();
+
+        });
+
+    }.bind(this);
+
+    this._report = function (datalakeUrl, datalakeNamespace, datalakeUserid, datalakePassword,
+        identityUrl) {
+
+        return new Promise((accept, reject) => {
+            let parmURL = `/report`
+
+            var xhttp = new XMLHttpRequest();
+
+            xhttp.open("GET", parmURL, true);
+
+            xhttp.setRequestHeader("datalake-url", datalakeUrl);
+            xhttp.setRequestHeader("datalake-namespace", datalakeNamespace);
+            xhttp.setRequestHeader("datalake-userid", datalakeUserid);
+            xhttp.setRequestHeader("datalake-password", datalakePassword);
+            xhttp.setRequestHeader("identity-url", identityUrl);
+  
             xhttp.onreadystatechange = async function () {
                 xhttp.onload = function () {
 
@@ -97,7 +150,7 @@ function Message() {
     }.bind(this);
 
     this._execute = function (datalakeUrl, datalakeNamespace, datalakeUserid, datalakePassword,
-        identityUrl, identityUserid, identityPassword, identityClientId, identitySecret,
+        identityUrl, identityUserid, identityPassword, identityClient, identitySecret,
         threads, batchsize, checkpoint, pagesize) {
 
         return new Promise((accept, reject) => {
@@ -114,7 +167,7 @@ function Message() {
             xhttp.setRequestHeader("identity-url", identityUrl);
             xhttp.setRequestHeader("identity-userid", identityUserid);
             xhttp.setRequestHeader("identity-password", identityPassword);
-            xhttp.setRequestHeader("identity-clientid", identityClientId);
+            xhttp.setRequestHeader("identity-client", identityClient);
             xhttp.setRequestHeader("identity-secret", identitySecret);
 
             xhttp.onreadystatechange = async function () {
@@ -155,56 +208,39 @@ function Message() {
 Message.prototype.command = function (datalakeUrl, datalakeNamespace,
     datalakeUserid, datalakePassword,
     identityUrl, identityUserid, identityPassword,
-    identityClientId, identitySecret,
-    action) {
-    console.log(`[${action}] Userid: ${identityUserid}`)
+    identityClient, identitySecret,
+    action,
+    args) {
 
     return this._command(datalakeUrl, datalakeNamespace,
         datalakeUserid, datalakePassword,
         identityUrl, identityUserid, identityPassword,
-        identityClientId, identitySecret,
-        action);
+        identityClient, identitySecret,
+        action,
+    args);
 
 }
 
-Message.prototype.reset = function (datalakeUrl, datalakeNamespace,
+Message.prototype.report = function (datalakeUrl, datalakeNamespace,
     datalakeUserid, datalakePassword,
-    identityUrl, identityUserid, identityPassword,
-    identityClientId, identitySecret) {
-    console.log(`Userid: ${identityUserid} - Password: ${identityPassword}`)
-
-    return this._command(datalakeUrl, datalakeNamespace,
+    identityUrl) {
+ 
+    return this._report(datalakeUrl, datalakeNamespace,
         datalakeUserid, datalakePassword,
-        identityUrl, identityUserid, identityPassword,
-        identityClientId, identitySecret,
-        "reset");
-
-}
-
-Message.prototype.regenerate = function (datalakeUrl, datalakeNamespace,
-    datalakeUserid, datalakePassword,
-    identityUrl, identityUserid, identityPassword,
-    identityClientId, identitySecret) {
-    console.log(`Userid: ${identityUserid} - Password: ${identityPassword}`)
-
-    return this._command(datalakeUrl, datalakeNamespace,
-        datalakeUserid, datalakePassword,
-        identityUrl, identityUserid, identityPassword,
-        identityClientId, identitySecret,
-        "regenerate");
+        identityUrl);
 
 }
 
 Message.prototype.execute = function (datalakeUrl, datalakeNamespace,
     datalakeUserid, datalakePassword,
     identityUrl, identityUserid, identityPassword,
-    identityClientId, identitySecret,
+    identityClient, identitySecret,
     threads, batchsize, checkpoint, pagesize) {
   
     return this._execute(datalakeUrl, datalakeNamespace,
         datalakeUserid, datalakePassword,
         identityUrl, identityUserid, identityPassword,
-        identityClientId, identitySecret,
+        identityClient, identitySecret,
         threads, batchsize, checkpoint, pagesize);
 
 }
