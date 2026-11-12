@@ -6,8 +6,8 @@ var entryList = [];
 var rows = [];
 
 var barchartThroughput = null;
-var barchartExecutes = null;
-var barchartExecuteTimes = null;
+var barchartRequests = null;
+var barchartExecuteTime = null;
 
 function convert(date) {
     const dateObj = new Date(date);
@@ -31,7 +31,7 @@ function formatTime(epochTime, adjustment = 1) {
 
 }
 
-async function command(action) {
+async function command(action, args = []) {
     try {
 
         document.getElementById("wait-dialog").showModal();
@@ -46,15 +46,12 @@ async function command(action) {
             document.getElementById("identity-url").value,
             document.getElementById("identity-userid").value,
             document.getElementById("identity-password").value,
-            document.getElementById("identity-clientid").value,
+            document.getElementById("identity-client").value,
             document.getElementById("identity-secret").value,
-            action);
+            action,
+            args);
 
         document.getElementById("wait-dialog").close();
-
-        document.getElementById("command-dialog").close();
-
-        document.getElementById("cancel-command-dialog").style.visibility = "visible";
         document.getElementById("command-button").disabled = false;
 
         document.getElementById("status").innerHTML = `${document.getElementById("datalake-url").value} - connected`;
@@ -64,7 +61,8 @@ async function command(action) {
         enable("server-action");
 
         document.getElementById("wait-dialog").close();
-        document.getElementById("command-dialog").close();
+
+        return true;
 
     } catch (exception) {
 
@@ -76,6 +74,8 @@ async function command(action) {
 
         document.getElementById("wait-dialog").close();
         showError(exception.message);
+
+        return false;
 
     }
 
@@ -92,9 +92,6 @@ function enable(className, enable = true) {
 async function updateStatus() {
     var message = new Message();
     var response = await message.monitor();
-
-    console.log(JSON.stringify(response));
-
     var table = document.getElementById("log-messages");
 
     table.replaceChildren();
@@ -105,9 +102,10 @@ async function updateStatus() {
         var cell = row.insertCell();
 
         cell.className = "log-table-item";
-        cell.style.width = "100px";
+        cell.style.width = "10px";
+        cell.style.fontFamily = "'Courier New', Courier, monospace";
 
-        cell.innerHTML = formatTime(entry.time, 1000);
+        cell.innerHTML = `${formatTime(entry.time, 1000)}`;
 
         cell = row.insertCell();
 
@@ -115,28 +113,28 @@ async function updateStatus() {
         cell.innerHTML = entry.message;
 
     }
-    
+
     var counters = response.response.counters;
     var currentHour = new Date(Date.now()).getHours();
 
     barchartThroughput.setOptimumScale(counters.throughput);
- 
-    barchartExecutes.setOptimumScale(counters.requests);
-    barchartExecuteTimes.setOptimumScale(counters.transactions);
+
+    barchartRequests.setOptimumScale(counters.requests);
+    barchartExecuteTime.setOptimumScale(counters.times);
 
     barchartThroughput.draw(counters.throughput, currentHour, "#008080", "#ccffff", 2);
-  
-    barchartExecutes.draw(counters.requests, currentHour, "#008080", "#ccffff", 0);
-    barchartExecuteTimes.draw(counters.throughput, currentHour, "#008080", "#ccffff", 0);
+
+    barchartRequests.draw(counters.requests, currentHour, "#008080", "#ccffff", 0);
+    barchartExecuteTime.draw(counters.times, currentHour, "#008080", "#ccffff", 0);
 
     document.getElementById("throughput-label").innerHTML =
         `Throughput Datalake (Units : ${barchartThroughput.precision}) - ${Math.trunc(counters.throughput[currentHour] / barchartThroughput.precision)}`;
 
     document.getElementById("executes-label").innerHTML =
-        `Execution (Units : ${barchartExecutes.precision}) - ${Math.trunc(counters.requests[currentHour] / barchartExecutes.precision)}`;
+        `Request Returned (Units : ${barchartRequests.precision}) - ${Math.trunc(counters.requests[currentHour] / barchartRequests.precision)}`;
 
     document.getElementById("execute-times-label").innerHTML =
-        `Execution Times (Units : ${barchartExecuteTimes.precision}) - ${Math.trunc(counters.transactions[currentHour] / barchartExecuteTimes.precision)}`;
+        `Execution Time (Units : ${barchartExecuteTime.precision}) - ${Math.trunc(counters.times[currentHour] / barchartExecuteTime.precision)}`;
 
 }
 
@@ -202,6 +200,46 @@ function addRow(table, value, callback) {
 
 }
 
+
+/**
+ * Add a index field row
+ * 
+ * @param {string} table the table element
+ * @param {string} field the index field
+ */
+function addIndexRow(table, field) {
+
+    var newIndex = document.getElementById(table).insertRow();
+
+    newIndex.classList.add("index-attributes");
+
+    var indexCell = newIndex.insertCell(0);
+    var trashCell = newIndex.insertCell(1);
+    var indexInput = document.createElement("input");
+
+    indexInput.style.fontSize = "14px";
+    indexInput.style.width = "380px";
+    indexInput.className = "index-field-value";
+    indexInput.value = field;
+
+    indexCell.appendChild(indexInput);
+
+    var trashButton = document.createElement("button");
+    trashButton.style.fontSize = "14px";
+    trashButton.style.width = "80";
+    trashButton.innerHTML = "Delete";
+
+    trashButton.addEventListener('click', function (event) {
+        var iRow = event.target.parentNode.parentNode.rowIndex;
+
+        document.getElementById(table).deleteRow(iRow);
+
+    });
+
+    trashCell.appendChild(trashButton);
+
+}
+
 /**
  * Respond to the Document 'ready' event
  */
@@ -209,29 +247,71 @@ window.onload = async function () {
 
     document.getElementById("ok-configure").addEventListener('click', async (e) => {
 
-        await command("configure");
+        document.getElementById("action-message").innerHTML = "Hit <b>OK</b> to continute the configuration action";
 
-    });
-
-    document.getElementById("ok-connect").addEventListener('click', async (e) => {
-
-        updateStatus();
-
-        enable("server-action");
-
-        document.getElementById("command-dialog").close();
+            window.action = async (url) => {
+                await command("configure");
+            };
+        
+        document.getElementById("action-dialog").showModal();
 
     });
 
     document.getElementById("ok-reset").addEventListener('click', async (e) => {
 
-        await command("configure");
+        document.getElementById("action-message").innerHTML = "Hit <b>OK</b> to continute to regenerate the identity token";
+
+        window.action = new async function () {
+            await command("regenerate");
+        }
+
+        document.getElementById("action-dialog").showModal();
 
     });
 
-    document.getElementById("ok-regenerate").addEventListener('click', async (e) => {
+    document.getElementById("ok-reset").addEventListener('click', async (e) => {
 
-        await command("regenerate");
+        document.getElementById("action-message").innerHTML = "Hit <b>OK</b> to continute the reset action";
+
+        window.action = new async function () {
+            await command("reset");
+        }
+
+        document.getElementById("action-dialog").showModal();
+
+    });
+
+    document.getElementById("action-dialog-ok").addEventListener('click', async (e) => {
+
+        await window.action();
+
+        document.getElementById("action-dialog").close();
+
+        return false;
+
+    });
+
+
+    document.getElementById("action-dialog-cancel").addEventListener('click', async (e) => {
+
+        await window.action();
+
+        document.getElementById("action-dialog").close();
+        
+        return false;
+
+    });
+
+    
+    document.getElementById("ok-connect").addEventListener('click', async (e) => {
+
+        updateStatus();
+       
+        enable("server-action");
+
+        document.getElementById("cancel-command-dialog").disabled = false;
+
+        document.getElementById("command-dialog").close();
 
     });
 
@@ -239,11 +319,15 @@ window.onload = async function () {
 
         document.getElementById("command-dialog").showModal();
 
+        return false;
+
     });
 
     document.getElementById("cancel-command-dialog").addEventListener('click', async (e) => {
 
         document.getElementById("command-dialog").close();
+
+        return false;
 
     });
 
@@ -253,16 +337,83 @@ window.onload = async function () {
 
     });
 
+    document.getElementById("info-button").addEventListener('click', async (e) => {
+
+        renderjson.setShowToLevel(3);
+
+        try {
+            document.getElementById("wait-dialog").showModal();
+
+            var message = new Message();
+
+            var response = await message.report(
+                document.getElementById("datalake-url").value,
+                document.getElementById("datalake-namespace").value,
+                document.getElementById("datalake-userid").value,
+                document.getElementById("datalake-password").value,
+                document.getElementById("identity-url").value);
+
+            for (var column of response["response"]) {
+
+                if (column["col"] == "json:control") {
+                    var tokens = JSON.parse(column["val"]);
+                    document.getElementById("token-view").replaceChildren();
+                    document.getElementById("token-view").appendChild(renderjson(tokens));
+
+                } else if (column["col"] == "json:checkpoint") {
+                    var checkpoint = JSON.parse(column["val"]);
+
+                    if (checkpoint["time"] != 0) {
+                        checkpoint["converted"] = formatTime(checkpoint["time"]);
+                    }
+
+                    document.getElementById("checkpoint-view").replaceChildren();
+                    document.getElementById("checkpoint-view").appendChild(renderjson(checkpoint));
+
+                }
+
+            }
+
+            document.getElementById("wait-dialog").close();
+            document.getElementById("info-dialog").showModal();
+
+        } catch (exception) {
+
+            if (exception.trace) {
+                console.log(exception.trace);
+            } else {
+                console.log(exception);
+            }
+
+            document.getElementById("wait-dialog").close();
+            showError(exception.message);
+
+        }
+
+    });
+
+    document.getElementById("index-button").addEventListener('click', async (e) => {
+
+        document.getElementById("index-dialog").showModal();
+
+    });
+
     document.getElementById("execute-button").addEventListener('click', async (e) => {
 
         document.getElementById("execute-dialog").showModal();
 
     });
 
+    document.getElementById("close-info-dialog").addEventListener('click', async (e) => {
+
+        document.getElementById("info-dialog").close();
+
+    });
+
     document.getElementById("ok-execute-dialog").addEventListener('click', async (e) => {
 
         try {
- 
+
             var message = new Message();
 
             message.execute(
@@ -273,7 +424,7 @@ window.onload = async function () {
                 document.getElementById("identity-url").value,
                 document.getElementById("identity-userid").value,
                 document.getElementById("identity-password").value,
-                document.getElementById("identity-clientid").value,
+                document.getElementById("identity-client").value,
                 document.getElementById("identity-secret").value,
                 document.getElementById("thread-count").value,
                 document.getElementById("batch-size").value,
@@ -282,7 +433,7 @@ window.onload = async function () {
             );
 
             window.setTimeout(function () {
-                 updateStatus();
+                updateStatus();
             }, 1000);
 
             document.getElementById("execute-dialog").close();
@@ -299,16 +450,34 @@ window.onload = async function () {
             showError(exception.message);
 
             window.setTimeout(function () {
-                 updateStatus();
+                updateStatus();
             }, 1000);
 
         }
 
     });
 
+    document.getElementById("ok-index-dialog").addEventListener('click', async (e) => {
+
+        document.getElementById("index-dialog").close();
+
+    });
+
+    document.getElementById("cancel-index-dialog").addEventListener('click', async (e) => {
+
+        document.getElementById("index-dialog").close();
+
+    });
+
     document.getElementById("cancel-execute-dialog").addEventListener('click', async (e) => {
 
         document.getElementById("execute-dialog").close();
+
+    });
+
+    document.getElementById("add-index-field").addEventListener('click', async (e) => {
+
+        addIndexRow("index-fields", "");
 
     });
 
@@ -345,8 +514,8 @@ window.onload = async function () {
     });
 
     barchartThroughput = new BarChart("throughput-container", 24);
-    barchartExecutes = new BarChart("executes-container", 24);
-    barchartExecuteTimes = new BarChart("execute-times-container", 24);
+    barchartRequests = new BarChart("executes-container", 24);
+    barchartExecuteTime = new BarChart("execute-times-container", 24);
 
     var panelView = new PanelView("static/images/expand.svg", "static/images/contract.svg");
 
@@ -355,6 +524,7 @@ window.onload = async function () {
     panelView.decorate("execute-times-collapse", "execute-times-collapse-image", "execute-times-container", true);
 
     activateTabs('configuration-tabs', 'datalake-panel', 'configuration-tab1');
+    activateTabs('info-tabs', 'summary-panel', 'info-tab1');
 
     document.getElementById("command-dialog").showModal();
 
