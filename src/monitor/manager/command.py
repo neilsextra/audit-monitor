@@ -16,7 +16,7 @@ class Command:
         self.accessor.set_logger(logger)
         self.storage.set_logger(logger)
  
-    def action(self, parameters, action):
+    def action(self, parameters, action, properties):
         result = {}
 
         self.monitor.message(f"[command] processing command {action} ...")
@@ -28,12 +28,14 @@ class Command:
                                                            parameters["identity_password"],  
                                                            parameters["identity_client"], 
                                                            parameters["identity_secret"])
-
-            del response_get_tokens["tokens"]["access_token"]
-            result["control"] = response_get_tokens
-            status = "OK"
     
             if (status_code in [200, 201]):
+                
+                del response_get_tokens["tokens"]["access_token"]
+                
+                result["control"] = response_get_tokens
+                status = "OK"
+
                 host_name = urlparse(parameters["identity_url"]).hostname  
     
                 if action == "reset":
