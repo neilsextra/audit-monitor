@@ -221,16 +221,6 @@ Message.prototype.command = function (datalakeUrl, datalakeNamespace,
 
 }
 
-Message.prototype.report = function (datalakeUrl, datalakeNamespace,
-    datalakeUserid, datalakePassword,
-    identityUrl) {
- 
-    return this._report(datalakeUrl, datalakeNamespace,
-        datalakeUserid, datalakePassword,
-        identityUrl);
-
-}
-
 Message.prototype.execute = function (datalakeUrl, datalakeNamespace,
     datalakeUserid, datalakePassword,
     identityUrl, identityUserid, identityPassword,
