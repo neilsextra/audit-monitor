@@ -23,6 +23,7 @@ class Monitor:
         self.counters[Monitor.PUTS]  = [0] * 24
 
         self.log = []
+        self.snapshots = []
 
         self.start_time = time.time()
 
@@ -73,10 +74,22 @@ class Monitor:
                             "message": message
                         })
 
+    def snapshot_status(self, count:int, started:int, ended:int):
+
+        if self.snapshots.count >= 100:
+            self.snapshots.pop(0)
+
+        self.snapshots.append({
+            "count": count,
+            "started": started,
+            "ended": ended
+        })
+
     def statistics(self):
 
         return {
             "start-time": int(self.start_time),
             "counters": self.counters,
-            "log": self.log
+            "log": self.log,
+            "snapshots": self.snapshots
         }
