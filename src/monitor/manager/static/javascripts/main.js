@@ -102,7 +102,9 @@ async function updateStatus() {
         var cell = row.insertCell();
 
         cell.className = "log-table-item";
-        cell.style.width = "10px";
+        cell.style.fontSize = "11px";
+        cell.style.fontWeight = "300";
+        cell.style.height = "20px";
         cell.style.fontFamily = "'Courier New', Courier, monospace";
 
         cell.innerHTML = `${formatTime(entry.time, 1000)}`;
@@ -125,7 +127,7 @@ async function updateStatus() {
     barchartThroughput.draw(counters.throughput, currentHour, "#008080", "#ccffff", 2);
 
     barchartRequests.draw(counters.requests, currentHour, "#008080", "#ccffff", 0);
-    barchartExecuteTime.draw(counters.times, currentHour, "#008080", "#ccffff", 0);
+    barchartExecuteTime.draw(counters.times, currentHour, "#252525", "#ccffff", 0);
 
     document.getElementById("throughput-label").innerHTML =
         `Throughput Datalake (Units : ${barchartThroughput.precision}) - ${Math.trunc(counters.throughput[currentHour] / barchartThroughput.precision)}`;
@@ -249,21 +251,21 @@ window.onload = async function () {
 
         document.getElementById("action-message").innerHTML = "Hit <b>OK</b> to continute the configuration action";
 
-            window.action = async (url) => {
-                await command("configure");
-            };
-        
+        window.action = async () => {
+            await command("configure");
+        };
+
         document.getElementById("action-dialog").showModal();
 
     });
 
-    document.getElementById("ok-reset").addEventListener('click', async (e) => {
+    document.getElementById("ok-regenerate").addEventListener('click', async (e) => {
 
-        document.getElementById("action-message").innerHTML = "Hit <b>OK</b> to continute to regenerate the identity token";
+        document.getElementById("action-message").innerHTML = "Hit <b>OK</b> to continute to regenerate the token";
 
-        window.action = new async function () {
+        window.action =  async () => {
             await command("regenerate");
-        }
+        };
 
         document.getElementById("action-dialog").showModal();
 
@@ -273,9 +275,9 @@ window.onload = async function () {
 
         document.getElementById("action-message").innerHTML = "Hit <b>OK</b> to continute the reset action";
 
-        window.action = new async function () {
+        window.action = async () => {
             await command("reset");
-        }
+        };
 
         document.getElementById("action-dialog").showModal();
 
@@ -294,19 +296,17 @@ window.onload = async function () {
 
     document.getElementById("action-dialog-cancel").addEventListener('click', async (e) => {
 
-        await window.action();
-
         document.getElementById("action-dialog").close();
-        
+
         return false;
 
     });
 
-    
+
     document.getElementById("ok-connect").addEventListener('click', async (e) => {
 
         updateStatus();
-       
+
         enable("server-action");
 
         document.getElementById("cancel-command-dialog").disabled = false;
@@ -345,13 +345,18 @@ window.onload = async function () {
             document.getElementById("wait-dialog").showModal();
 
             var message = new Message();
-
-            var response = await message.report(
+            var response = await message.command(
                 document.getElementById("datalake-url").value,
                 document.getElementById("datalake-namespace").value,
                 document.getElementById("datalake-userid").value,
                 document.getElementById("datalake-password").value,
-                document.getElementById("identity-url").value);
+                document.getElementById("identity-url").value,
+                document.getElementById("identity-userid").value,
+                document.getElementById("identity-password").value,
+                document.getElementById("identity-client").value,
+                document.getElementById("identity-secret").value,
+                "report",
+                []);
 
             for (var column of response["response"]) {
 
@@ -478,6 +483,26 @@ window.onload = async function () {
     document.getElementById("add-index-field").addEventListener('click', async (e) => {
 
         addIndexRow("index-fields", "");
+
+    });
+
+    document.getElementById("message-view-activate").addEventListener('click', async (e) => {
+ 
+        document.getElementById("message-view-activate").className = "rotate-active";
+        document.getElementById("snapshot-view-activate").className = "rotate-inactive";
+        
+        document.getElementById("message-panel").style.display = "inline-block";
+        document.getElementById("snapshot-panel").style.display = "none";
+
+    });
+
+    document.getElementById("snapshot-view-activate").addEventListener('click', async (e) => {
+ 
+        document.getElementById("message-view-activate").className = "rotate-inactive";
+        document.getElementById("snapshot-view-activate").className = "rotate-active";
+
+        document.getElementById("message-panel").style.display = "none";
+        document.getElementById("snapshot-panel").style.display = "inline-block";
 
     });
 
