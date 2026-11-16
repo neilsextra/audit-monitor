@@ -3,7 +3,7 @@ from manager.monitor import Monitor
 from manager.command import Command
 from manager.accessor import Accessor
 from manager.storage import Storage
-from manager.executor import Executor
+from manager.snapshot import Snapshot
 from manager.checkpointer import Checkpointer
 
 class Container(containers.DeclarativeContainer):
@@ -13,5 +13,5 @@ class Container(containers.DeclarativeContainer):
     accessor = providers.Factory(Accessor, monitor)
     storage = providers.Factory(Storage, monitor)
     checkpointer = providers.Factory(Checkpointer, monitor, storage)
-    executor = providers.Factory(Executor, monitor, accessor, storage, checkpointer)
+    snapshot = providers.Factory(Snapshot, monitor, accessor, storage, checkpointer)
     command = providers.Factory(Command, monitor, accessor, storage)
