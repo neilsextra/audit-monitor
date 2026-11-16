@@ -58,7 +58,7 @@ def get_command():
             "identity_secret": request.headers.get('identity-secret')
         },
         request.values.get('action', 'regenerate'),
-        request.args.getlist('args'))
+        request.args.getlist('arg'))
 
 @app.route("/monitor", methods=["GET"])
 def get_monitor():
