@@ -32,9 +32,9 @@ class Accessor:
 
         return oaInfo
     
-    def get_session(self):
-          
+    def get_session(self):  
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
         session = requests.Session()
         retry = Retry( total=100, connect=100, read=100, backoff_factor=0.5)
         adapter = HTTPAdapter(max_retries=retry)
@@ -44,6 +44,8 @@ class Accessor:
         return session
     
     def get_tokens(self, url, userid, password, client, secret):
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
         session = self.get_session()
         urls = self.get_urls(session, url)
 
@@ -70,7 +72,8 @@ class Accessor:
             "urls" : urls}, 200
 
     def refresh_token(self, client, secret, credential):
-
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+ 
         refresh_token = credential["tokens"]["refresh_token"]
         token_endpoint = credential["urls"]["token_endpoint"]
 
@@ -87,12 +90,15 @@ class Accessor:
         return token_endpoint, json.loads(response.text)
 
     def logoff(self, session, token):
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+         
         urls = self.get_urls
         headers = {"Authorization": token['token_type'] + " " + token["access_token"], "Content-Type": "application/json"}
         response = session.post(urls[Accessor.REVOCATION_ENDPOINT], headers=headers,  verify=False)
 
     def get_dn(self, url_base, client, secret, credential, dn:str):
- 
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+         
         url, token = self.refresh_token(client, secret, credential)
 
         headers = {"Authorization": token["token_type"] + " " + token["access_token"], "Content-Type": "application/json"}
@@ -109,6 +115,8 @@ class Accessor:
         }
 
     def get_requests(self, url_base:str, client:str, secret, credential, dn:str):
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+          
         url, token, status_code = self.refresh_token(client, secret, credential)
 
         headers = {"Authorization": token["token_type"] + " " + token["access_token"], "Content-Type": "application/json"}
@@ -123,7 +131,8 @@ class Accessor:
         }
     
     def get_request_details(self, url_base, client, secret, credential, id):
-             
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+               
         url, token = self.refresh_token(client, secret, credential)
 
         headers = {"Authorization": token["token_type"] + " " + token["access_token"], "Content-Type": "application/json"}
@@ -138,7 +147,8 @@ class Accessor:
         }
 
     def retrieve_requests(self, url_base:str, client:str, secret:str, credential, start:str, size:str, creation_time:int):
-
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+  
         url, token = self.refresh_token(client, secret, credential)
 
         headers = {"Authorization": token["token_type"] + " " + token["access_token"], "Content-Type": "application/json"}
@@ -178,4 +188,3 @@ class Accessor:
             "requests": [],
             "returned": 0
             }
-     
