@@ -249,13 +249,13 @@
         </div>
     </dialog>
 
-    <dialog id="execute-dialog" class="dialog" style="min-width:620px; height:440px; overflow: hidden;">
-        <p style="font-size: 18px; font-weight: bold; border-bottom:2px groove rgba(0,0,0, 0.2)">Execution Parameters
+    <dialog id="snapshot-dialog" class="dialog" style="min-width:620px; height:440px; overflow: hidden;">
+        <p style="font-size: 18px; font-weight: bold; border-bottom:2px groove rgba(0,0,0, 0.2)">Snapshot Parameters...
         </p>
 
-        <div style="position:absolute; top:80px; left:0px; right:0px; overflow:none">
-            <img src="{{url_for( 'static', filename='images/running.svg')}}" width="128" height="128"
-                style="float: left; margin-right:10px;" />
+        <div style="position:absolute; top:80px; left:10px; right:0px; overflow:none">
+            <img src="{{url_for( 'static', filename='images/snapshot.svg')}}" width="96" height="96"
+                style="float: left;" />
         </div>
 
         <div style="position:absolute; top:80px; left:120px; right:10px; bottom:60px;">
@@ -407,10 +407,10 @@
         </div>
 
         <div style="position:absolute; bottom:10px; left:10px; right:10px;">
-            <button id="ok-execute-dialog" class="message-dialog-small-button"
-                style="position:absolute; right:80px; bottom:10px; margin-top:10px;">Execute</button>
+            <button id="ok-snapshot-dialog" class="message-dialog-small-button"
+                style="position:absolute; right:80px; bottom:10px; margin-top:10px;">Snapshot</button>
 
-            <button id="cancel-execute-dialog" class="close-button message-dialog-small-cancel-button server-action"
+            <button id="cancel-snapshot-dialog" class="close-button message-dialog-small-cancel-button server-action"
                 style="position:absolute; bottom:10px; right:0px; margin-top:30px; width:70px;" disabled>Cancel</button>
         </div>
 
@@ -437,9 +437,9 @@
                     style="float:right; height:24px; width:40px; margin-right:10px" disabled>
                     <img src="{{ url_for('static', filename='images/index.svg') }}" width="18" height="18"></img>
                 </button>
-                <button id="execute-button" class="message-dialog-small-button server-action"
+                <button id="snapshot-button" class="message-dialog-small-button server-action"
                     style="float:right; height:24px; width:40px; margin-right:10px" disabled>
-                    <img src="{{ url_for('static', filename='images/running.svg') }}" width="18" height="18"></img>
+                    <img src="{{ url_for('static', filename='images/snapshot.svg') }}" width="18" height="18"></img>
                 </button>
 
             </div>
