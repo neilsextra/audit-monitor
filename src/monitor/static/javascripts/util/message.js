@@ -8,7 +8,7 @@ function Message() {
             let parmURL = `/command?action=${encodeURIComponent(command)}`
 
             for (var arg of args) {
-                parmURL += `&${encodeURIComponent(arg["name"])}=${encodeURIComponent(arg["value"])}`;
+                parmURL += `&arg=${encodeURIComponent(arg)}`;
             }
 
             var xhttp = new XMLHttpRequest();
@@ -149,12 +149,12 @@ function Message() {
 
     }.bind(this);
 
-    this._execute = function (datalakeUrl, datalakeNamespace, datalakeUserid, datalakePassword,
+    this._snapshot = function (datalakeUrl, datalakeNamespace, datalakeUserid, datalakePassword,
         identityUrl, identityUserid, identityPassword, identityClient, identitySecret,
         threads, batchsize, checkpoint, pagesize) {
 
         return new Promise((accept, reject) => {
-            let parmURL = `/execute?threads=${threads}&batch-size=${batchsize}&checkpoint=${checkpoint}&page-size=${pagesize}`
+            let parmURL = `/snapshot?threads=${threads}&batch-size=${batchsize}&checkpoint=${checkpoint}&page-size=${pagesize}`
 
             var xhttp = new XMLHttpRequest();
 
@@ -221,13 +221,13 @@ Message.prototype.command = function (datalakeUrl, datalakeNamespace,
 
 }
 
-Message.prototype.execute = function (datalakeUrl, datalakeNamespace,
+Message.prototype.snapshot = function (datalakeUrl, datalakeNamespace,
     datalakeUserid, datalakePassword,
     identityUrl, identityUserid, identityPassword,
     identityClient, identitySecret,
     threads, batchsize, checkpoint, pagesize) {
   
-    return this._execute(datalakeUrl, datalakeNamespace,
+    return this._snapshot(datalakeUrl, datalakeNamespace,
         datalakeUserid, datalakePassword,
         identityUrl, identityUserid, identityPassword,
         identityClient, identitySecret,
