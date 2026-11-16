@@ -110,7 +110,6 @@ async function updateStatus() {
         cell.innerHTML = `${formatTime(entry.time, 1000)}`;
 
         cell = row.insertCell();
-
         cell.className = "log-table-item";
         cell.innerHTML = entry.message;
 
@@ -125,9 +124,8 @@ async function updateStatus() {
     barchartExecuteTime.setOptimumScale(counters.times);
 
     barchartThroughput.draw(counters.throughput, currentHour, "#008080", "#ccffff", 2);
-
     barchartRequests.draw(counters.requests, currentHour, "#008080", "#ccffff", 0);
-    barchartExecuteTime.draw(counters.times, currentHour, "#252525", "#ccffff", 0);
+    barchartExecuteTime.draw(counters.times, currentHour, "#008080", "#ccffff", 0);
 
     document.getElementById("throughput-label").innerHTML =
         `Throughput Datalake (Units : ${barchartThroughput.precision}) - ${Math.trunc(counters.throughput[currentHour] / barchartThroughput.precision)}`;
@@ -263,7 +261,7 @@ window.onload = async function () {
 
         document.getElementById("action-message").innerHTML = "Hit <b>OK</b> to continute to regenerate the token";
 
-        window.action =  async () => {
+        window.action = async () => {
             await command("regenerate");
         };
 
@@ -358,13 +356,21 @@ window.onload = async function () {
                 "report",
                 []);
 
-            for (var column of response["response"]) {
+            console.log(JSON.stringify(response["response"]["output"][0]["message"]));
+
+            for (var column of response["response"]["output"][0]["message"]) {
 
                 if (column["col"] == "json:control") {
                     var tokens = JSON.parse(column["val"]);
                     document.getElementById("token-view").replaceChildren();
                     document.getElementById("token-view").appendChild(renderjson(tokens));
-
+                
+                } else if (column["col"] == "json:indexes") {
+                    var indexes = JSON.parse(column["val"]);
+                    
+                    document.getElementById("indexes-view").replaceChildren();
+                    document.getElementById("indexes-view").appendChild(renderjson(indexes));
+ 
                 } else if (column["col"] == "json:checkpoint") {
                     var checkpoint = JSON.parse(column["val"]);
 
@@ -403,9 +409,9 @@ window.onload = async function () {
 
     });
 
-    document.getElementById("execute-button").addEventListener('click', async (e) => {
+    document.getElementById("snapshot-button").addEventListener('click', async (e) => {
 
-        document.getElementById("execute-dialog").showModal();
+        document.getElementById("snapshot-dialog").showModal();
 
     });
 
@@ -415,13 +421,13 @@ window.onload = async function () {
 
     });
 
-    document.getElementById("ok-execute-dialog").addEventListener('click', async (e) => {
+    document.getElementById("ok-snapshot-dialog").addEventListener('click', async (e) => {
 
         try {
 
             var message = new Message();
 
-            message.execute(
+            message.snapshot(
                 document.getElementById("datalake-url").value,
                 document.getElementById("datalake-namespace").value,
                 document.getElementById("datalake-userid").value,
@@ -441,7 +447,7 @@ window.onload = async function () {
                 updateStatus();
             }, 1000);
 
-            document.getElementById("execute-dialog").close();
+            document.getElementById("snapshot-dialog").close();
 
         } catch (exception) {
 
@@ -463,8 +469,25 @@ window.onload = async function () {
     });
 
     document.getElementById("ok-index-dialog").addEventListener('click', async (e) => {
+        var indexes = [];
 
-        document.getElementById("index-dialog").close();
+        var rows = document.getElementsByClassName("index-field-value")
+
+        for (var row of rows) {
+
+            if(row.value.length > 0) {
+                indexes.push(row.value);
+            }
+
+        }
+
+        document.getElementById("action-message").innerHTML = "Hit <b>OK</b> to continute the index action";
+          
+        var status = await command("index", indexes);
+
+        if (status) {
+            document.getElementById("index-dialog").close();
+        }
 
     });
 
@@ -474,35 +497,15 @@ window.onload = async function () {
 
     });
 
-    document.getElementById("cancel-execute-dialog").addEventListener('click', async (e) => {
+    document.getElementById("cancel-snapshot-dialog").addEventListener('click', async (e) => {
 
-        document.getElementById("execute-dialog").close();
+        document.getElementById("snapshot-dialog").close();
 
     });
 
     document.getElementById("add-index-field").addEventListener('click', async (e) => {
 
         addIndexRow("index-fields", "");
-
-    });
-
-    document.getElementById("message-view-activate").addEventListener('click', async (e) => {
- 
-        document.getElementById("message-view-activate").className = "rotate-active";
-        document.getElementById("snapshot-view-activate").className = "rotate-inactive";
-        
-        document.getElementById("message-panel").style.display = "inline-block";
-        document.getElementById("snapshot-panel").style.display = "none";
-
-    });
-
-    document.getElementById("snapshot-view-activate").addEventListener('click', async (e) => {
- 
-        document.getElementById("message-view-activate").className = "rotate-inactive";
-        document.getElementById("snapshot-view-activate").className = "rotate-active";
-
-        document.getElementById("message-panel").style.display = "none";
-        document.getElementById("snapshot-panel").style.display = "inline-block";
 
     });
 
@@ -550,6 +553,7 @@ window.onload = async function () {
 
     activateTabs('configuration-tabs', 'datalake-panel', 'configuration-tab1');
     activateTabs('info-tabs', 'summary-panel', 'info-tab1');
+    activateTabs('message-tabs', 'message-panel', 'message-tab1');
 
     document.getElementById("command-dialog").showModal();
 
