@@ -19,12 +19,22 @@
     </style>
 
     <script src="{{ url_for('static', filename='javascripts/util/message.js') }}"></script>
+    <script src="{{ url_for('static', filename='javascripts/util/stringutils.js') }}"></script>
     <script src="{{ url_for('static', filename='javascripts/gui/tabview.js') }}"></script>
     <script src="{{ url_for('static', filename='javascripts/gui/panelview.js') }}"></script>
     <script src="{{ url_for('static', filename='javascripts/gui/barchart.js') }}"></script>
     <script src="{{ url_for('static', filename='javascripts/gui/jsonview.js') }}"></script>
 
 </head>
+
+<script type="text/template" id="snapshot-version">
+  <div class="container left" onclick="retrieve('${request}')">
+    <div class="${class}" id="snapshot-${request}">
+      <label style="font-weight:bold">${time}</label>
+      <p style="font-size: 12px; font-family: 'Lucida Console', 'Courier New', monospace;"">${request}</p>
+    </div>
+  </div>
+</script>
 
 <body>
     <dialog id="wait-dialog" class="dialog"
@@ -214,7 +224,7 @@
                     <button class="tablinks" id="info-tab2"
                         onclick="showTab(event, 'info-tabs', 'indexes-panel', 'info-tab2')"
                         value="URLs">Indexes</button>
-                     <button class="tablinks" id="info-tab3"
+                    <button class="tablinks" id="info-tab3"
                         onclick="showTab(event, 'info-tabs', 'checkpoint-panel', 'info-tab3')"
                         value="checkpoint">Checkpoint</button>
                 </div>
