@@ -13,5 +13,5 @@ class Container(containers.DeclarativeContainer):
     accessor = providers.Factory(Accessor, monitor)
     storage = providers.Factory(Storage, monitor)
     checkpointer = providers.Factory(Checkpointer, monitor, storage)
-    snapshot = providers.Factory(Snapshot, monitor, accessor, storage, checkpointer)
     command = providers.Factory(Command, monitor, accessor, storage)
+    snapshot = providers.Factory(Snapshot, monitor, accessor, storage, checkpointer, command)
