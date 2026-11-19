@@ -36,7 +36,7 @@ class Checkpointer:
                                  parameters["datalake_namespace"],
                                  parameters["datalake_userid"],
                                  parameters["datalake_password"],
-                                 parameters["host_name"],
+                                 parameters["datalake_table_name"],
                                 "$", "json", "checkpoint", 
                             json.dumps({
                                 'time': self.checkpoint_time
@@ -50,7 +50,7 @@ class Checkpointer:
                              parameters["datalake_namespace"],
                              parameters["datalake_userid"],
                              parameters["datalake_password"],
-                             parameters["host_name"],
+                             parameters["datalake_table_name"],
                              "$", "json", "checkpoint", 
                         json.dumps({
                             "time": time
