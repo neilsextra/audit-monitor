@@ -259,7 +259,7 @@
         </div>
     </dialog>
 
-    <dialog id="snapshot-dialog" class="dialog" style="min-width:620px; height:440px; overflow: hidden;">
+    <dialog id="snapshot-dialog" class="dialog" style="min-width:620px; height:500px; overflow: hidden;">
         <p style="font-size: 18px; font-weight: bold; border-bottom:2px groove rgba(0,0,0, 0.2)">Snapshot Parameters...
         </p>
 
@@ -343,13 +343,13 @@
                 </div>
 
                 <div class="execution-option" style="width:550px; height:40px;">
-                    <label for="checkpoint-count"
+                    <label for="scan-size-value"
                         style="display:inline-block; width:80px; font-size:14px; font-weight:bold; margin-left:20px;"
-                        class="field">Checkpoint:</label>
-                    <input type="range" id="checkpoint-count" name="limit" min="100" max="1000" value="100" step="100"
+                        class="field">Scan Size:</label>
+                    <input type="range" id="scan-size" name="limit" min="100" max="1000" value="100" step="100"
                         list="checkpoint-tickmarks" style="width:340px; left:80px;"></input>
 
-                    <label id="checkpoint-count-value" class="current-value">100</label>
+                    <label id="scan-size-value" class="current-value">100</label>
 
                     <datalist id="checkpoint-tickmarks">
                         <option value="100"></option>
