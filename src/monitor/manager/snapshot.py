@@ -7,6 +7,7 @@ from manager.monitor import Monitor
 from manager.command import Command
 
 class Snapshot:
+    """Snapshots are point-in-time copies of the NetIQ Identity Manager Request Database"""
 
     CHECKPOINT_COLUMN = "json:checkpoint"
     TOKENS_COLUMN = "json:tokens"
@@ -21,10 +22,32 @@ class Snapshot:
         self.command = command
           
     def set_logger(self, logger):
+        """
+        Parameters
+        ----------
+        self : object
+            The 'self' owner object
+        logger : object
+            The logger object - manager fo log messages
+        """
         self.logger = logger
         
     def processor(self, worker_id: int, parameters:object, credential:object, indexes:object, task_queue: queue.Queue):
-
+        """
+            Parameters
+            ----------
+            self : object
+                The 'self' owner object
+            parameters : object
+                An array of name/value parameters
+            credential : string
+                The OAuth token (base64 encoded)
+            indexes : array
+                 an array off fields with an a request to index
+            task_queue : queue.Queue
+                  a FIFO queue of requests to be processed 
+            """
+        self.logge
         def new_pointers(indexes):
             pointers = {}
 
