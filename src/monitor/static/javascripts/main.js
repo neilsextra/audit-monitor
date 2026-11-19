@@ -89,6 +89,26 @@ function enable(className, enable = true) {
 
 }
 
+function snapshots(requests, request) {
+    var stringUtils = new StringUtils();
+  
+    document.getElementById('request-timeline').replaceChildren();
+    
+    var template = document.getElementById("snapshot-version").text;
+    for (var request of requests) {
+
+        stringUtils.append(template, 'request-timeline',
+            {
+                "creationTime": request["creationTime"],
+                "completionTime": request["completionTime"],
+                "request": request["key"],
+                "class": "container-selected"
+            });
+
+    }
+
+}
+
 async function updateStatus() {
     var message = new Message();
     var response = await message.monitor();
@@ -247,7 +267,7 @@ window.onload = async function () {
 
     document.getElementById("ok-configure").addEventListener('click', async (e) => {
 
-        document.getElementById("action-message").innerHTML = "Hit <b>OK</b> to continute the configuration action";
+        document.getElementById("action-message").innerHTML = "Hit <b>OK</b> to continute the configuration";
 
         window.action = async () => {
             await command("configure");
@@ -271,7 +291,7 @@ window.onload = async function () {
 
     document.getElementById("ok-reset").addEventListener('click', async (e) => {
 
-        document.getElementById("action-message").innerHTML = "Hit <b>OK</b> to continute the reset action";
+        document.getElementById("action-message").innerHTML = "Hit <b>OK</b> to continute the reset";
 
         window.action = async () => {
             await command("reset");
@@ -439,7 +459,7 @@ window.onload = async function () {
                 document.getElementById("identity-secret").value,
                 document.getElementById("thread-count").value,
                 document.getElementById("batch-size").value,
-                document.getElementById("checkpoint-count").value,
+                document.getElementById("scan-size").value,
                 document.getElementById("page-size").value
             );
 
@@ -481,7 +501,7 @@ window.onload = async function () {
 
         }
 
-        document.getElementById("action-message").innerHTML = "Hit <b>OK</b> to continute the index action";
+        document.getElementById("action-message").innerHTML = "Hit <b>OK</b> to continute the index";
           
         var status = await command("index", indexes);
 
@@ -519,9 +539,9 @@ window.onload = async function () {
         document.getElementById(`batch-size-value`).innerHTML = event.target.value;
     });
 
-    document.getElementById(`checkpoint-count`).addEventListener('input', function (event) {
+    document.getElementById(`scan-size`).addEventListener('input', function (event) {
         var directory = window.directory;
-        document.getElementById(`checkpoint-count-value`).innerHTML = event.target.value;
+        document.getElementById(`scan-size-value`).innerHTML = event.target.value;
     });
 
     document.getElementById(`page-size`).addEventListener('input', function (event) {
