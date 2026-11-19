@@ -74,13 +74,15 @@ class Monitor:
                             "message": message
                         })
 
-    def snapshot_status(self, count:int, started:int, ended:int):
+    def set_snapshot_monitor(self, started:int, ended:int, threads:int, checkpoint:int, count:int):
 
-        if self.snapshots.count >= 100:
+        while len(self.snapshots) >= 100:
             self.snapshots.pop(0)
 
         self.snapshots.append({
+            "checkpoint": checkpoint,
             "count": count,
+            "threads": threads,
             "started": started,
             "ended": ended
         })
