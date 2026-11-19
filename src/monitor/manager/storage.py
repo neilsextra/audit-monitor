@@ -178,3 +178,24 @@ class Storage:
             return [], 400
 
         return values, 200
+
+    def get_columns(self, base_url:str, userid:str, password:str, name_space:str, table_name:str, row_key: str, start: int, size:int):
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    
+        headers = {"Accept": "application/json"}
+
+        url = f"{base_url}/{name_space}:{table_name}/{row_key}?limit=1&filter=ColumnPaginationFilter(%d,%d)"
+        response = requests.get(url, auth=(userid, password), headers=headers, verify=False)
+
+    def delete_cell(self, base_url:str, userid:str, password:str, name_space:str, table_name:str, row_key: str, column_family: str, cell:str):
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+                    
+        url = f"{base_url}/{name_space}:{table_name}/{row_key}/{column_family}:{cell}"
+        headers = {"Accept": "application/json"}
+
+        response = requests.delete(url, auth=(userid, password), headers=headers, verify=False)      
+
+        return {
+            "row": row_key,
+            "cell": cell
+            }, response.status_code
