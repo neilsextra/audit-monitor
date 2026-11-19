@@ -45,7 +45,7 @@ app.register_blueprint(views)
 def get_command():
 
     print("get_command")
-    return command.action(
+    return command.execute(
     {
             "datalake_url": request.headers.get('datalake-url'),
             "datalake_namespace": request.headers.get('datalake-namespace'),
@@ -72,12 +72,11 @@ def get_monitor():
             "text": repr(error)
         }, sort_keys=True), 500
    
-@app.route("/execute", methods=["GET"])
-def get_execute():
+@app.route("/snapshot", methods=["GET"])
+def get_snapshot():
 
     try:
-   
-        executor.execute({
+        snapshot.execute({
             "datalake_url": request.headers.get('datalake-url'),
             "datalake_namespace": request.headers.get('datalake-namespace'),
             "datalake_userid": request.headers.get('datalake-userid'),
@@ -87,9 +86,9 @@ def get_execute():
             "identity_secret": request.headers.get('identity-secret'),
             "threads": int(request.values.get('threads', '10')),
             "batch_size": int(request.values.get('batch-size', '10')),
-            "checkpoint": int(request.values.get('checkpoint', '10')),
+            "scan_size": int(request.values.get('scan-size', '100')),
             "page_size": int(request.values.get('page-size', '100')),
-            "host_name":  urlparse(request.headers.get('identity-url')).hostname
+            "datalake_table_name":  urlparse(request.headers.get('identity-url')).hostname
         })
 
         response = {
@@ -117,14 +116,14 @@ if __name__ == "__main__":
     accessor = container.accessor()
     storage = container.storage()
     monitor = container.monitor()
-    executor = container.executor()
+    snapshot = container.snapshot()
     checkpointer = container.checkpointer()
     command = container.command()
  
     accessor.set_logger(app.logger)
     storage.set_logger(app.logger)
     monitor.set_logger(app.logger)
-    executor.set_logger(app.logger)
+    snapshot.set_logger(app.logger)
     checkpointer.set_logger(app.logger)
     command.set_logger(app.logger)
 
