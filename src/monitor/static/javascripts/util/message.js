@@ -151,10 +151,10 @@ function Message() {
 
     this._snapshot = function (datalakeUrl, datalakeNamespace, datalakeUserid, datalakePassword,
         identityUrl, identityUserid, identityPassword, identityClient, identitySecret,
-        threads, batchsize, checkpoint, pagesize) {
+        threads, batchsize, scanSize, pagesize) {
 
         return new Promise((accept, reject) => {
-            let parmURL = `/snapshot?threads=${threads}&batch-size=${batchsize}&checkpoint=${checkpoint}&page-size=${pagesize}`
+            let parmURL = `/snapshot?threads=${threads}&batch-size=${batchsize}&scan-size=${scanSize}&page-size=${pagesize}`
 
             var xhttp = new XMLHttpRequest();
 
@@ -225,13 +225,13 @@ Message.prototype.snapshot = function (datalakeUrl, datalakeNamespace,
     datalakeUserid, datalakePassword,
     identityUrl, identityUserid, identityPassword,
     identityClient, identitySecret,
-    threads, batchsize, checkpoint, pagesize) {
+    threads, batchsize, scanSize, pagesize) {
   
     return this._snapshot(datalakeUrl, datalakeNamespace,
         datalakeUserid, datalakePassword,
         identityUrl, identityUserid, identityPassword,
         identityClient, identitySecret,
-        threads, batchsize, checkpoint, pagesize);
+        threads, batchsize, scanSize, pagesize);
 
 }
 
