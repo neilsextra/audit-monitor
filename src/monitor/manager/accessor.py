@@ -12,6 +12,7 @@ class Accessor:
     DN_DETAILS_URL = "/IDMProv/rest/access/users/details"
     REQUEST_DETAILS_URL = "/IDMProv/rest/access/requests/history/item?includeSystemComments=true"
     REQUEST_LIST_URL = "/IDMProv/rest/access/monitoring/process/list"
+    REQUEST_URL = "IDMProv/rest/access/requests/processes"
  
     TOKEN_ENDPOINT = "token_endpoint"
     REVOCATION_ENDPOINT = "revocation_endpoint"
@@ -113,40 +114,9 @@ class Accessor:
                 "reason" : response.reason,
                 "response": response.text
         }
-
-    def get_requests(self, url_base:str, client:str, secret, credential, dn:str):
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-          
-        url, token, status_code = self.refresh_token(client, secret, credential)
-
-        headers = {"Authorization": token["token_type"] + " " + token["access_token"], "Content-Type": "application/json"}
-        session = self.get_session()        
-        payload = {"dn": dn, "start":0, "size": 25}
-   
-        response = session.post(url_base + Accessor.HISTORY_URL + "?size=100", data=json.dumps(payload), headers=headers, verify=False)
-
-        return { "status_code" : response.status_code,
-                 "reason" : response.reason,
-                 "response": json.dumps(response.text)
-        }
     
-    def get_request_details(self, url_base, client, secret, credential, id):
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-               
-        url, token = self.refresh_token(client, secret, credential)
 
-        headers = {"Authorization": token["token_type"] + " " + token["access_token"], "Content-Type": "application/json"}
-        session = self.get_session()
-        payload = {"id": id, "entityType": "prd"}
-
-        response = session.post(url_base + Accessor.REQUEST_DETAILS_URL, data=json.dumps(payload), headers=headers, verify=False)
-
-        return { "status_code" : response.status_code,
-                 "reason" : response.reason,
-                 "response": response.text
-        }
-
-    def retrieve_requests(self, url_base:str, client:str, secret:str, credential, start:str, size:str, creation_time:int):
+    def get_request(self, url_base:str, client:str, secret:str, credential:str, process_id:str):
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
   
         url, token = self.refresh_token(client, secret, credential)
@@ -154,15 +124,37 @@ class Accessor:
         headers = {"Authorization": token["token_type"] + " " + token["access_token"], "Content-Type": "application/json"}
 
         session = self.get_session()   
-        params = {"startIndex":start, "size": size} 
+   
+        params = {"processId": process_id}
 
-        if creation_time != None:
-            print(f"[accessor] Creation time: {creation_time} ")
-            params = {"startIndex": start, "size":size, "sortOrder":"asc" , "operator": "GT", "creationTime":creation_time, "sortField":"CREATION_TIME"}
+        print(json.dumps(params))
+              
+        response = session.get(url_base + Accessor.REQUEST_URL, params=params, headers=headers, verify=False)
 
+        return { "status_code" : response.status_code,
+                "reason" : response.reason,
+                "response": json.dumps(response.text),
+
+                } if (response.status_code in (200, 201)) else  { "status_code" : response.status_code,
+                            "reason" : response.reason,
+                            "response": response.text
+                }
+    
+    def get_requests(self, url_base:str, client:str, secret:str, credential:str, start:str, size:str, creation_time:int):
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+  
+        url, token = self.refresh_token(client, secret, credential)
+
+        headers = {"Authorization": token["token_type"] + " " + token["access_token"], "Content-Type": "application/json"}
+
+        session = self.get_session()   
+        params = {"startIndex": start, "size":size, "sortOrder":"asc" , "operator": "GT", "creationTime":creation_time, "sortField":"CREATION_TIME"}
+
+        print(json.dumps(params))
+              
         response = session.get(url_base + Accessor.REQUEST_LIST_URL, params=params, headers=headers, verify=False)
  
-        if response.status_code not in(200, 201):
+        if response.status_code not in (200, 201):
             self.logger.info(f"[command] - error {response.status_code} - {response.reason} - {response.text}")
             
             return { "status_code" : response.status_code,
@@ -188,4 +180,3 @@ class Accessor:
             "requests": [],
             "returned": 0
             }
-     
