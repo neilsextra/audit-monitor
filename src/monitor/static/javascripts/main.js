@@ -460,7 +460,9 @@ window.onload = async function () {
                 document.getElementById("thread-count").value,
                 document.getElementById("batch-size").value,
                 document.getElementById("scan-size").value,
-                document.getElementById("page-size").value
+                document.getElementById("page-size").value,
+                document.getElementById("check-frequency").value,
+                document.getElementById("retain-period").value
             );
 
             window.setTimeout(function () {
@@ -530,23 +532,27 @@ window.onload = async function () {
     });
 
     document.getElementById(`thread-count`).addEventListener('input', function (event) {
-        var directory = window.directory;
-        document.getElementById(`thread-count-value`).innerHTML = event.target.value;
+         document.getElementById(`thread-count-value`).innerHTML = event.target.value;
     });
 
     document.getElementById(`batch-size`).addEventListener('input', function (event) {
-        var directory = window.directory;
         document.getElementById(`batch-size-value`).innerHTML = event.target.value;
     });
 
     document.getElementById(`scan-size`).addEventListener('input', function (event) {
-        var directory = window.directory;
-        document.getElementById(`scan-size-value`).innerHTML = event.target.value;
+         document.getElementById(`scan-size-value`).innerHTML = event.target.value;
     });
 
     document.getElementById(`page-size`).addEventListener('input', function (event) {
-        var directory = window.directory;
         document.getElementById(`page-size-value`).innerHTML = event.target.value;
+    });
+
+    document.getElementById(`check-frequency`).addEventListener('input', function (event) {
+        document.getElementById(`check-frequency-value`).innerHTML = event.target.value;
+    });
+    
+    document.getElementById(`retain-period`).addEventListener('input', function (event) {
+        document.getElementById(`retain-period-value`).innerHTML = event.target.value;
     });
 
     document.getElementById(`command-dialog`).addEventListener('input', function (event) {
