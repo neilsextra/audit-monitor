@@ -11,12 +11,23 @@ class Command:
     SNAPSHOT_ROW = "!"
 
     def __init__(self, monitor, accessor, storage) -> None:
+        """
+        Parameters
+        ----------
+        self : object
+            The 'self' owner object
+        monitor : object
+             The 'monitor' manages the logs and performance counters
+        storage : object
+              The 'storage' serializes the requests data to permanent storage within the datalake
+        """
+
         self.monitor = monitor      
         self.accessor = accessor
         self.storage = storage
         self.commands = {
             "reset": [self.get_configuration, self.drop_table, self.create_table, self.set_tokens, self.set_timestamp, self.recreate_index],
-            "configure": [self.create_table, self.set_tokens, self.set_timestamp],
+            "configure": [self.drop_table, self.create_table, self.set_tokens, self.set_timestamp],
             "regenerate": [self.set_tokens],
             "index": [self.create_index],
             "report": [self.get_configuration]
@@ -27,6 +38,15 @@ class Command:
         }
 
     def set_logger(self, logger):
+        """
+        Parameters
+        ----------
+        self : object
+            The 'self' current object
+        logger : object
+            The FLASK logger
+         """
+                
         self.logger = logger
         self.accessor.set_logger(logger)
         self.storage.set_logger(logger)
@@ -58,7 +78,7 @@ class Command:
             elif column["col"] == "json:indexes":
                 indexes = json.loads(column["val"])
 
-        self.monitor.message(f"[{action}] table - '{parameters["datalake_table_name"]}' configuration returned")
+        self.monitor.message(f"[{action}] table - '{parameters["datalake_table_name"]}' configuration: {status_code}")
 
         return config, status_code,  {
             'configuration': {
@@ -74,21 +94,22 @@ class Command:
             parameters["datalake_userid"], 
             parameters["datalake_password"], 
             parameters["datalake_table_name"]):
-         
-            self.storage.create_table(parameters["datalake_url"], 
+
+            print("Before create table")
+            response = self.storage.create_table(parameters["datalake_url"], 
                                                 parameters["datalake_namespace"], 
                                                 parameters["datalake_userid"], 
                                                 parameters["datalake_password"], 
                                                 parameters["datalake_table_name"], 
-                                                "json")
-                                                
+                                                "json",
+                                                "text")
             self.monitor.message(f"[{action}] table - '{parameters["datalake_table_name"]}' created")
             
-            return f"[{action}] table - '{parameters["datalake_table_name"]}' created", 200, {}
+            return f"[{action}] table - '{parameters["datalake_table_name"]}' created", response.status_code, {}
         else:
             self.monitor.message(f"[{action}] table - '{parameters["datalake_table_name"]}' exists")
             
-            return f"[{action}] table - '{parameters["datalake_table_name"]}' exists", 301, {}
+            return f"[{action}] table - '{parameters["datalake_table_name"]}' exists", 302, {}
     
     def drop_table(self, action, parameters, context, arguments = []):
         self.storage.drop_table(parameters["datalake_url"], 
@@ -159,8 +180,8 @@ class Command:
             created_on = int(time.time())
 
             for argument in arguments:
-    
-                index = f"{parameters["datalake_table_name"]}-{argument}"
+                index_name = argument.split(":")[0].lower()
+                index = f"{parameters["datalake_table_name"]}-{index_name}"
 
                 if self.storage.table_exists(parameters["datalake_url"], 
                     parameters["datalake_namespace"], 
@@ -184,7 +205,7 @@ class Command:
                 self.monitor.message(f"[{action}] index - '{parameters["datalake_table_name"]}' - '{index}' created")
 
                 indexes.append({
-                    "field": argument,
+                    "field": argument.split(':')[1],
                     "index": index,
                     "created-on": created_on
                 });
@@ -228,7 +249,7 @@ class Command:
             for command in commands:
                 message, status_code, context = command(action, parameters, context, arguments)
 
-                if status_code not in [200, 21]:
+                if status_code not in [200, 201]:
                     return json.dumps({
                          "status-code": status_code,
                          "message" : message
@@ -256,4 +277,3 @@ class Command:
     def call(self, action,  parameters, arguments):
         
         return self.actions[action](action.value, parameters, {}, arguments)
-
