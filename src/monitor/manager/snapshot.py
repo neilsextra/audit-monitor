@@ -9,7 +9,7 @@ from manager.monitor import Monitor
 from manager.command import Command
 
 class Snapshot:
-    """Snapshots are point-in-time copies of the NetIQ Identity Manager Request Database"""
+    """Snapshots are point-in-time copies of all the Identity Manager Requests"""
 
     CHECKPOINT_COLUMN = "json:checkpoint"
     TOKENS_COLUMN = "json:tokens"
