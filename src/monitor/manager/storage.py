@@ -23,6 +23,28 @@ class Storage:
          self.logger = logger
 
     def table_exists(self, base_url:str, name_space:str, userid:str, password:str, table_name:str):
+        """
+        Determines if a table exists within the data-lake's name-space
+
+        Parameters
+        ----------
+        self : object
+            The 'self' owner object
+        base_url : string
+            The data-lake's base URL
+        name_space : string
+            The selected data-lake's name space 
+        userid : string
+            The userid to use to connect to the data-lake with that name-space
+        password : string
+            The userid associated password
+        table_name : string
+            The table's table name           
+            
+        Returns
+        -------
+            boolean: true - exists, false otherwise
+        """       
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
@@ -39,7 +61,28 @@ class Storage:
 
         return int(response.status_code) in [200, 201]
 
+    
     def create_table(self, base_url:str, name_space:str, userid:str, password:str, table_name:str, *column_families:str):
+        """
+        Create a table within the data-lake's namespace with the column_families must be more than 1 entry in that array
+
+        Parameters
+        ----------
+        self : object
+            The 'self' owner object
+        base_url : string
+            The data-lake's base URL
+        name_space : string
+            The selected data-lake's name space 
+        userid : string
+            The userid to use to connect to the data-lake with that namespace
+        password : string
+            The userid associated password
+        table_name : string
+             The table's table name           
+        column_families : array of strings
+             The column families             
+        """
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
         print(f"Inside: create_table: {column_families}")
@@ -75,6 +118,24 @@ class Storage:
         return response
 
     def drop_table(self, base_url:str, name_space:str, userid:str, password:str, table_name:str):
+        """
+        Drop a table within the data-lake's namespace
+
+        Parameters
+        ----------
+        self : object
+            The 'self' owner object
+        base_url : string
+            The data-lake's base URL
+        name_space : string
+            The selected data-lake's name space 
+        userid : string
+            The userid to use to connect to the data-lake with that namespace
+        password : string
+            The userid associated password
+        table_name : string
+             The table's table nameto drop                 
+        """
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
  
         full_table_name = f"{name_space}:{table_name}"
@@ -208,7 +269,7 @@ class Storage:
                         "col": col,
                         "val": val
                     })    
-                                   
+
         return values, response.status_code     
 
     def delete_cell(self, base_url:str, userid:str, password:str, name_space:str, table_name:str, row_key: str, column_family: str, cell:str):
