@@ -1,3 +1,4 @@
+import json
 import base64
 import urllib3
 import requests
@@ -38,25 +39,29 @@ class Storage:
 
         return int(response.status_code) in [200, 201]
 
-    def create_table(self, base_url:str, name_space:str, userid:str, password:str, table_name:str, column_family:str):
+    def create_table(self, base_url:str, name_space:str, userid:str, password:str, table_name:str, *column_families:str):
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
- 
-        self.logger.info(f"[create_table] URL: {base_url} - {userid}/{password}")
+
+        print(f"Inside: create_table: {column_families}")
      
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
-
         full_table_name = f"{name_space}:{table_name}"
  
-        url = f"{base_url}/{full_table_name}/schema"    
-        
+        url = f"{base_url}/{full_table_name}/schema"  
+
         schema = {
-            "ColumnSchema": [
-                {
-                    "name": column_family,
-                    "VERSIONS": 3 
-                }
-            ]
-        }
+            "ColumnSchema": []
+        } 
+
+        for column_family in column_families:
+            print(f"Processing column_family: {column_family}")
+            
+            schema["ColumnSchema"].append({
+                "name": column_family,
+                "VERSIONS": 3  
+            })   
+
+        print(schema)
         
         response = requests.put(url, headers=headers, auth=(userid, password), json=schema, verify=False)
 
@@ -177,7 +182,7 @@ class Storage:
         else:
             return [], 400
 
-        return values, 200
+        return values, response.status_code
 
     def get_columns(self, base_url:str, userid:str, password:str, name_space:str, table_name:str, row_key: str, start: int, size:int):
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -186,6 +191,25 @@ class Storage:
 
         url = f"{base_url}/{name_space}:{table_name}/{row_key}?limit=1&filter=ColumnPaginationFilter(%d,%d)"
         response = requests.get(url, auth=(userid, password), headers=headers, verify=False)
+
+        values = []
+
+        if response.status_code == 200:
+            data = response.json()
+
+            for row in data.get("Row", []):
+                for cell in row.get("Cell", []):
+                    # Decode column name and cell value
+                    col = Storage.b64_decode(cell.get("column"))
+                    val = Storage.b64_decode(cell.get("$"))
+
+                    values.append({
+                        "row": row_key,
+                        "col": col,
+                        "val": val
+                    })    
+                                   
+        return values, response.status_code     
 
     def delete_cell(self, base_url:str, userid:str, password:str, name_space:str, table_name:str, row_key: str, column_family: str, cell:str):
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
