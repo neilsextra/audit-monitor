@@ -429,13 +429,13 @@ class Snapshot:
 
             return next
 
-        def set_snapshot_cell(snapshot_time:int, unprocessed_requests: int, new_requests:int, checkpoint_time:int, time_taken:int):
+        def set_log_record(snapshot_time:int, queued_requests: int, new_requests:int, checkpoint_time:int, time_taken:int):
         
             return json.dumps(
                  {
                     "snapshot_time": snapshot_time,
-                    "unprocessed_requests": unprocessed_requests,
-                    "new_requests": unprocessed_requests,
+                    "queued_requests": queued_requests,
+                    "new_requests": new_requests,
                     "checkpoint_time": checkpoint_time,
                     "time_taken": time_taken
                   }
@@ -465,7 +465,7 @@ class Snapshot:
 
             new_requests_count = get_requests(parameters)
             
-            put_requests(parameters, task_queue)
+            queued_requests = queue_requests(parameters, task_queue)
  
             for worker in range(num_worker_threads):
                 task_queue.put(f"close")
@@ -487,10 +487,10 @@ class Snapshot:
                             parameters["datalake_userid"], 
                             parameters["datalake_password"], 
                             parameters["datalake_table_name"], 
-                            Command.CONFIGURATION_ROW, 
-                            "json", "control", set_snapshot_cell(started_on, 
-                                                                 uncompleted_requests_count, 
-                                                                 new_request_count,
+                            Command.SNAPSHOT_ROW, 
+                            "json", "control", set_log_record(started_on, 
+                                                                 queued_requests, 
+                                                                 new_requests_count,
                                                                  checkpoint_time, 
                                                                  int(time.time()) - started_on))
 
