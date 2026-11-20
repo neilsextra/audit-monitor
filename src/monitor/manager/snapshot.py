@@ -2,6 +2,8 @@ import queue
 import threading
 import json
 import time
+from functools import reduce
+import operator
 
 from manager.monitor import Monitor
 from manager.command import Command
@@ -11,10 +13,22 @@ class Snapshot:
 
     CHECKPOINT_COLUMN = "json:checkpoint"
     TOKENS_COLUMN = "json:tokens"
-    INPROGRESS_ROW_KEY = "?"
-    SNAPSHOT_ROW_KEY = "!"
+    INPROGRESS_ROW_KEY = "!"
  
     def __init__(self, monitor, accessor, storage, checkpointer, command) -> None:
+        """
+        Parameters
+        ----------
+        self : object
+            The 'self' owner object
+        monitor : object
+                The 'monitor' manages the logs and performance counters
+        accessor : object
+                 The 'accessor' the interface between the Identity Manager and the Audit Monitor
+        storage : object
+                 The 'storage' serializes the requests data to permanent storage within the datalake
+         """
+        
         self.monitor = monitor
         self.accessor = accessor
         self.storage = storage
@@ -34,21 +48,29 @@ class Snapshot:
         
     def processor(self, worker_id: int, parameters:object, credential:object, indexes:object, task_queue: queue.Queue):
         """
+        Parameters
+        ----------
+        self : object
+            The owner object
+        parameters : object
+            An array of name/value parameters
+        credential : string
+            The OAuth token (base64 encoded)
+        indexes : array
+                an array off fields with an a request to index
+        task_queue : queue.Queue
+                a FIFO queue of requests to 
+            """
+        def new_pointers(indexes):
+            """
             Parameters
             ----------
-            self : object
-                The 'self' owner object
-            parameters : object
-                An array of name/value parameters
-            credential : string
-                The OAuth token (base64 encoded)
-            indexes : array
-                 an array off fields with an a request to index
-            task_queue : queue.Queue
-                  a FIFO queue of requests to be processed 
+            indexes : object
+                An array of indexes
+            Return
+            ------
+                A pointer structure
             """
-        self.logge
-        def new_pointers(indexes):
             pointers = {}
 
             for index in indexes:
@@ -57,7 +79,19 @@ class Snapshot:
 
             return pointers
 
-        def set_snapshot_cell(process, details):
+        def set_snapshot_cell(process:object, details:object) -> object:
+            """
+            Parameters
+            ----------
+            process : object
+                The request's process
+            details : object  
+                The request's details including the comments
+
+            Return
+            ------
+                An snapshot row with the columns populated
+            """
             return {
                     "row_key": process['requestId'],
                     "cell": [ 
@@ -78,38 +112,48 @@ class Snapshot:
                     ]
                 }
 
-        def set_index_cell(index:object, process:object):
+        def set_index_cell(index:object, details:object) -> object:
+            """
+            Parameters
+            ----------
+            index : object
+                The name of index
+            details : object
+                The detail's object
 
+            Return
+            ------
+            row: object 
+                only if the index field is present in the data
+           """
+
+            value = reduce(operator.getitem, index.split("/"), details["processes"][0])
+               
             return {
-                    "row_key": process[index["field"]],
+                    "row_key": value,
                     "cell": [ 
                         {
                             "column": {
                                 "family": "text",
-                                "qualifier":  f"{process['creationTime']}:{process['requestId']}",
-                                "value":  f"{process['requestId']}"
+                                "qualifier": f"{details['processes'][0]['creationTime']}:{process['processes'][0]['requestId']}",
+                                "value": ""
                             }
                         }    
                     ]
-                    } if index["field"] in process else None
+            } if value != None else None
 
-
-        def set_uncompleted_cell(process:object):
-
-            return {
-                    "row_key": self.INPROGRESS_ROW_KEY,
-                    "cell": [ 
-                        {
-                            "column": {
-                                "family": "text",
-                                "qualifier":  f"{process['creationTime']}:{process['requestId']}",
-                                "value":  f"{process['requestId']}"
-                            }
-                        }    
-                    ]
-                    } 
         
-        def put_all_rows(parameters:object, snapshots:object, pointers: object):
+        def put_all_rows(parameters:object, snapshots:object, pointers: object) -> None:
+            """
+            Parameters
+            ----------
+            parameters : object
+                The snapshot parameters - datalake connection, identity manager connection and snapshot peformance parameters
+            snapshots : object
+                The snapshot rows
+            pointers : object
+                The index entries
+            """
                         
             self.storage.bulk_put_row(parameters["datalake_url"], 
                     parameters["datalake_namespace"],
@@ -122,7 +166,7 @@ class Snapshot:
             for pointer in pointers.keys():  
                 self.storage.bulk_put_row(parameters["datalake_url"], 
                     parameters["datalake_namespace"],
-                    pointer,
+                    pointer.split('/')[0],
                     parameters["datalake_userid"],
                     parameters["datalake_password"],
                     pointers[pointer]
@@ -132,7 +176,6 @@ class Snapshot:
 
         snapshots = []
         pointers = new_pointers(indexes)
-        uncompleted = []
         batch_counter = 0
 
         start_timer = 0
@@ -156,8 +199,7 @@ class Snapshot:
                                                     credential, 
                                                     process['requestId'])
 
-                if (request_details["processStatus"].lower() == "completed"):
-        
+                if (request_details["processStatus"] in ["Completed"]):
                     snapshots.append(set_snapshot_cell(process, 
                                                         self.accessor.get_request_details(parameters["identity_url"], 
                                                         parameters["identity_client"],
@@ -165,41 +207,37 @@ class Snapshot:
                                                         credential, 
                                                         process['requestId'])))
                     for index in indexes:
-                            column = set_index_cell(index, process)
-    
-                            if (column != None):
-                                pointers[index["index"]].append(column)
+                        column = set_index_cell(index, request_details)
+               
+                    self.storage.delete_cell(parameters["datalake_url"], 
+                                    parameters["datalake_namespace"],
+                                    parameters["datalake_tyable_name"],
+                                    parameters["datalake_userid"],
+                                    parameters["datalake_password"],
+                                    self.INPROGRESS_ROW_KEY,
+                                    "json",
+                                    process["column"])
 
-                    if process("source") in ["table"]:
-                          self.storage.delete_cell(parameters["datalake_url"], 
-                                            parameters["datalake_namespace"],
-                                            parameters["datalake_tyable_name"],
-                                            parameters["datalake_userid"],
-                                            parameters["datalake_password"],
-                                            self.INPROGRESS_ROW_KEY,
-                                            "json",
-                                            process["column"])
-
-                else:
-                    uncompleted.append(set_uncompleted_cell(process))
-                
-                batch_counter += 1
                     
-                if (batch_counter == parameters["batch_size"]):
-                    self.logger.info(f"[{worker_id}] worker - {counter} - {len(snapshots)} - storing")
+                    batch_counter += 1
                     
-                    put_all_rows(parameters, snapshots, pointers)    
+                    if (batch_counter == parameters["batch_size"]):
+                        self.logger.info(f"[{worker_id}] worker - {counter} - {len(snapshots)} - storing")
+                        
+                        put_all_rows(parameters, snapshots, pointers)    
 
-                    snapshots.clear()  
+                        snapshots.clear()  
 
-                    for pointer in pointers.keys():
-                        pointers[pointer] = []
+                        for pointer in pointers.keys():
+                            pointers[pointer] = []
 
-                    batch_counter = 0
-                
-                self.checkpointer.checkpoint(parameters, int(process['completionTime']))
-                self.monitor.add_counter(Monitor.THROUGHPUT, len(json.dumps(snapshots)))
-                self.monitor.add_counter(Monitor.TIMES, (time.perf_counter() - start_timer) * 1000)
+                        batch_counter = 0
+                    else:
+                        batch_counter += 1
+                    
+                    self.checkpointer.checkpoint(parameters, int(process['completionTime']))
+                    self.monitor.add_counter(Monitor.THROUGHPUT, len(json.dumps(snapshots)))
+                    self.monitor.add_counter(Monitor.TIMES, (time.perf_counter() - start_timer) * 1000)
 
             except queue.Empty:
                 continue
@@ -220,9 +258,31 @@ class Snapshot:
 
         task_queue.task_done()
 
-    def task(self, logger,  monitor, parameters):
+    def task(self, logger,  monitor, parameters):            
+        """
+        Parameters
+        ----------
+        self : object
+             The 'self' owner object
+        logger : object
+            The FLASK logger
+        monitor : object
+             The 'monitor' manages the logs and performance counters
+        parameters : object
+            The snapshot parameters - datalake connection, identity manager connection and snapshot peformance parameters
+        """
         
-        def process_config(config):
+        def process_config(config) -> object:
+            """
+            Parameters
+            ----------
+            config : object
+                The configuration - contains the OAuth renewal token
+            Return
+            ------
+                Configuration parameters
+            """
+
             indexes = []
 
             for column in config:
@@ -241,8 +301,108 @@ class Snapshot:
 
             return checkpoint_time, credential, indexes
 
-        def process_uncompleted(parameters:object, task_queue:object):
+        def get_requests(parameters:object, creation_time:str) -> object:
+            """
+            Parameters
+            ----------
+            parameters : object
+                 The snapshot parameters - datalake connection, identity manager connection and snapshot peformance parameters
+            creation_time : string  
+                The request's details including the comments
+
+            Return
+            ------
+                checkpoint_time: str
+                    the new checkpoint time - next snapshot's execution commencement time
+                request_count: int
+                    the number of new requests
+            """
+
+            def set_request_row(request_id, creation_time):
+                """
+                Parameters
+                ----------
+                request_id : string
+                    The request's process idenitifiers
+                creation_time : string  
+                    The request's details including the comments
+    
+                Return
+                ------
+                    An unprocessed row row with the columns populated
+                """
+                return {
+                        "row_key": self.INPROGRESS_ROW_KEY,
+                        "cell": [ 
+                            {
+                                "column": {
+                                    "family": "text",
+                                    "qualifier": f"{creation_time}:{request_id}",
+                                    "value": int(time.time())
+                                }
+                            }     
+                        ]
+                    }
+            def put_requests(requests:object):
+                """
+                Parameters
+                ----------
+                requests : object(array)
+                        An array of requests for processing
+                 """
+
+                if len(requests) != 0:
+                    self.storage.bulk_put_row(parameters["datalake_url"], 
+                                parameters["datalake_namespace"],
+                                parameters["datalake_table_name"],
+                                parameters["datalake_userid"],
+                                parameters["datalake_password"],
+                                requests)
+
+
+            request_count = 0
+            batch_counter = 0
+
+
+            requests = []
+
+            checkpoint_time = creation_time
+            
+            while True:  
+                response = self.accessor.get_requests(parameters["identity_url"], 
+                                                    parameters["identity_client"], 
+                                                    parameters["identity_secret"], 
+                                                    credential, 
+                                                    0, 
+                                                    parameters["page_size"], 
+                                                    checkpoint_time)
+                self.monitor.message(f"[retrieve]:  ({response["status_code"]}) - {parameters["page_size"]}   {len(response["requests"])}") 
+                
+                for request in response["requests"]:
+                    process_info = json.dumps(request)
+
+                    requests.append(set_request_row(process_info['requestionId'], process_info['creationTime']))
+                
+                    request_count += 1
+
+                    if (batch_counter == parameters["batch_size"]): 
+                        put_requests(requests)
+                        batch_counter = 0
+                        requests.clear()
+                    else:
+                        batch_counter += 1
+                  
+
+                if len("requests" not in response or response["requests"]) != parameters["page_size"]: 
+                    break
+
+                
+            return checkpoint_time, request_count
+    
+        def queue_requests(parameters:object, task_queue:object):
             next = 0
+            queue_length = 0
+            batch_count = 0
         
             while True: 
 
@@ -256,10 +416,11 @@ class Snapshot:
                                                             int(parameters["scan_size"])) 
                 for column in config: 
                     task_queue.put({
-                            "source": "table",
-                            "processId": column["col"].split(":")[1],
+                            "request_id": column["col"].split(":")[1],
+                            "creation_time": column["col"].split(":")[0],
                             "column": column["col"]
                     })
+
 
                 next += int(parameters["scan_size"])
 
@@ -267,40 +428,6 @@ class Snapshot:
                     break
 
             return next
-
-        def process_requests(parameters:object, task_queue:object):
-
-            request_count = 0
-            
-            while True:  
-                response = self.accessor.get_requests(parameters["identity_url"], 
-                                                        parameters["identity_client"], 
-                                                        parameters["identity_secret"], 
-                                                        credential, 
-                                                        0, 
-                                                        parameters["page_size"], 
-                                                        checkpoint_time)
-                self.monitor.message(f"[retrieve]:  ({response["status_code"]}) - {parameters["page_size"]}   {len(response["requests"])}") 
-                
-                for request in response["requests"]:
-                    processInfo = json.dumps(request)
-
-                    task_queue.put({
-                        "source": "service",
-                        "processId": processInfo["processId"],
-                        "column": f"{request['creationTime']}:{processInfo["processId"]}"
-                    })
-
-                    checkpoint_time = request['creationTime'] 
-                
-                    print(f"Next: {len(response["requests"])} {checkpoint_time}")
-
-                    request_count += 1
-                            
-                if len("requests" not in response or response["requests"]) != parameters["page_size"]: 
-                    break
-
-            return request_count
 
         def set_snapshot_cell(snapshot_time:int, unprocessed_requests: int, new_requests:int, checkpoint_time:int, time_taken:int):
         
@@ -336,8 +463,9 @@ class Snapshot:
                 thread.start()
                 threads.append(thread)
 
-            uncompleted_requests_count = process_uncompleted(parameters, task_queue)
-            new_request_count = process_uncompleted(parameters, task_queue)
+            new_requests_count = get_requests(parameters)
+            
+            put_requests(parameters, task_queue)
  
             for worker in range(num_worker_threads):
                 task_queue.put(f"close")
