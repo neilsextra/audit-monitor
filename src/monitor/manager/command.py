@@ -8,8 +8,9 @@ class Command:
         GET_CONFIGURATION = 'get_configuration'
 
     CONFIGURATION_ROW = "$"
-    SNAPSHOT_ROW = "!"
-
+    SNAPSHOT_ROW = "?"
+    HISTORY_ROW = "!"
+ 
     def __init__(self, monitor, accessor, storage) -> None:
         """
         Parameters
@@ -30,8 +31,9 @@ class Command:
             "configure": [self.drop_table, self.create_table, self.set_tokens, self.set_timestamp],
             "regenerate": [self.set_tokens],
             "index": [self.create_index],
-            "report": [self.get_configuration]
-        }
+            "report": [self.get_configuration],
+            "history": [self.get_history]
+          }
 
         self.actions = {
            Command.Actions.GET_CONFIGURATION: self.get_configuration
@@ -84,10 +86,21 @@ class Command:
             'configuration': {
                 'indexes': indexes,
                 'credential': credential,
-                'checkpoint_time' :checkpoint_time
+                'checkpoint_time': checkpoint_time
             }
         }           
-          
+
+    def get_history(self, action, parameters, context, arguments = []):
+    
+        return self.storage.get_columns(parameters["datalake_url"],  
+                                        parameters["datalake_userid"], 
+                                        parameters["datalake_password"], 
+                                        parameters["datalake_namespace"], 
+                                        parameters["datalake_table_name"],
+                                        self.HISTORY_ROW,
+                                        arguments[0],
+                                        arguments[1]), {} 
+
     def create_table(self, action, parameters,  context, arguments = []):
         if not self.storage.table_exists(parameters["datalake_url"], 
             parameters["datalake_namespace"], 
