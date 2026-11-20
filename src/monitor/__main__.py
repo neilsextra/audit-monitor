@@ -44,7 +44,6 @@ app.register_blueprint(views)
 @app.route("/command", methods=["GET"])
 def get_command():
 
-    print("get_command")
     return command.execute(
     {
             "datalake_url": request.headers.get('datalake-url'),
@@ -88,6 +87,8 @@ def get_snapshot():
             "batch_size": int(request.values.get('batch-size', '10')),
             "scan_size": int(request.values.get('scan-size', '100')),
             "page_size": int(request.values.get('page-size', '100')),
+            "check_frequency": int(request.values.get('check-frequency', '2')),
+            "retain_period": int(request.values.get('retain-period', '60')),
             "datalake_table_name":  urlparse(request.headers.get('identity-url')).hostname
         })
 
