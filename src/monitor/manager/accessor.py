@@ -12,16 +12,37 @@ class Accessor:
     DN_DETAILS_URL = "/IDMProv/rest/access/users/details"
     REQUEST_DETAILS_URL = "/IDMProv/rest/access/requests/history/item?includeSystemComments=true"
     REQUEST_LIST_URL = "/IDMProv/rest/access/monitoring/process/list"
-    REQUEST_URL = "IDMProv/rest/access/requests/processes"
+    REQUEST_URL = "/IDMProv/rest/access/requests/processes"
  
     TOKEN_ENDPOINT = "token_endpoint"
     REVOCATION_ENDPOINT = "revocation_endpoint"
 
     def __init__(self, monitor) -> None:
+        """
+        Instantiate the object - called from the 'container' 
+
+        Parameters
+        ----------
+        self : object
+            The 'self' owner object
+        monitor : object
+                The 'monitor' manages the logs and performance counters
+        """
+        
         self.monitor = monitor
 
     def set_logger(self, logger):
-         self.logger = logger
+        """
+        Set the FLASK logger 
+
+        Parameters
+        ----------
+        self : object
+            The 'self' owner object
+        logger : object
+            The logger object - manager fo log messages
+        """
+        self.logger = logger
 
     def get_urls(self, session, url):
         url_base = str(url).split("?")[0]
@@ -118,7 +139,7 @@ class Accessor:
 
     def get_request(self, url_base:str, client:str, secret:str, credential:str, process_id:str):
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-  
+      
         url, token = self.refresh_token(client, secret, credential)
 
         headers = {"Authorization": token["token_type"] + " " + token["access_token"], "Content-Type": "application/json"}
@@ -126,18 +147,15 @@ class Accessor:
         session = self.get_session()   
    
         params = {"processId": process_id}
-
-        print(json.dumps(params))
               
         response = session.get(url_base + Accessor.REQUEST_URL, params=params, headers=headers, verify=False)
 
         return { "status_code" : response.status_code,
                 "reason" : response.reason,
-                "response": json.dumps(response.text),
+                "response": response.text,
 
                 } if (response.status_code in (200, 201)) else  { "status_code" : response.status_code,
-                            "reason" : response.reason,
-                            "response": response.text
+                    "reason" : response.reason
                 }
     
     def get_requests(self, url_base:str, client:str, secret:str, credential:str, start:str, size:str, creation_time:int):
@@ -149,9 +167,6 @@ class Accessor:
 
         session = self.get_session()   
         params = {"startIndex": start, "size":size, "sortOrder":"asc" , "operator": "GT", "creationTime":creation_time, "sortField":"CREATION_TIME"}
-
-        print(json.dumps(params))
-              
         response = session.get(url_base + Accessor.REQUEST_LIST_URL, params=params, headers=headers, verify=False)
  
         if response.status_code not in (200, 201):
@@ -180,3 +195,19 @@ class Accessor:
             "requests": [],
             "returned": 0
             }
+
+    def get_request_details(self, url_base, client, secret, credential, id):
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+               
+        url, token = self.refresh_token(client, secret, credential)
+
+        headers = {"Authorization": token["token_type"] + " " + token["access_token"], "Content-Type": "application/json"}
+        session = self.get_session()
+        payload = {"id": id, "entityType": "prd"}
+
+        response = session.post(url_base + Accessor.REQUEST_DETAILS_URL, data=json.dumps(payload), headers=headers, verify=False)
+
+        return { "status_code" : response.status_code,
+                 "reason" : response.reason,
+                 "response": response.text
+        }
