@@ -17,6 +17,8 @@ class Snapshot:
  
     def __init__(self, monitor, accessor, storage, checkpointer, command) -> None:
         """
+        Instantiate the object - called from the 'container' 
+
         Parameters
         ----------
         self : object
@@ -37,6 +39,8 @@ class Snapshot:
           
     def set_logger(self, logger):
         """
+        Set the FLASK logger 
+
         Parameters
         ----------
         self : object
@@ -48,6 +52,8 @@ class Snapshot:
         
     def processor(self, worker_id: int, parameters:object, credential:object, indexes:object, task_queue: queue.Queue):
         """
+        Task to process all the messages on the queue
+
         Parameters
         ----------
         self : object
@@ -60,9 +66,12 @@ class Snapshot:
                 an array off fields with an a request to index
         task_queue : queue.Queue
                 a FIFO queue of requests to 
+        """
+        
+        def new_references(indexes):
             """
-        def new_pointers(indexes):
-            """
+            Create the pointer indexes based on the fields defined in specific request details
+
             Parameters
             ----------
             indexes : object
@@ -71,21 +80,20 @@ class Snapshot:
             ------
                 A pointer structure
             """
-            pointers = {}
+            references = {}
 
             for index in indexes:
+                references[index["index"]] = []
 
-                pointers[index["index"]] = []
+            return references
 
-            return pointers
-
-        def set_snapshot_cell(process:object, details:object) -> object:
+        def set_snapshot_cell(requestId, summary:object, history:object) -> object:
             """
             Parameters
             ----------
-            process : object
+            summary : object
                 The request's process
-            details : object  
+            history : object  
                 The request's details including the comments
 
             Return
@@ -93,26 +101,26 @@ class Snapshot:
                 An snapshot row with the columns populated
             """
             return {
-                    "row_key": process['requestId'],
+                    "row_key": requestId,
                     "cell": [ 
                         {
                             "column": {
                                 "family": "json",
                                 "qualifier": "summary",
-                                "value": json.dumps(process)
+                                "value": json.dumps(summary, separators=(',', ':'))
                             }
                         },
                         {
                             "column": {
                                     "family": "json",
                                     "qualifier": "history",
-                                    "value": details["response"]
+                                    "value": json.dumps(history, separators=(',', ':'))
                             }
                         }      
                     ]
                 }
 
-        def set_index_cell(index:object, details:object) -> object:
+        def set_index_cells(index:object, details:object) -> object:
             """
             Parameters
             ----------
@@ -125,36 +133,38 @@ class Snapshot:
             ------
             row: object 
                 only if the index field is present in the data
-           """
+            """
+            
+            value = reduce(operator.getitem, index["field"].split("/"), details)
 
-            value = reduce(operator.getitem, index.split("/"), details["processes"][0])
-               
             return {
                     "row_key": value,
                     "cell": [ 
                         {
                             "column": {
                                 "family": "text",
-                                "qualifier": f"{details['processes'][0]['creationTime']}:{process['processes'][0]['requestId']}",
-                                "value": ""
+                                "qualifier": f"{details['creationTime']}:{details['requestId']}",
+                                "value": str(int(time.time()))
                             }
                         }    
                     ]
             } if value != None else None
 
         
-        def put_all_rows(parameters:object, snapshots:object, pointers: object) -> None:
+        def put_snapshot(parameters:object, snapshots:object, references: object) -> None:
             """
+            Put (Write) an array of completed requests (summary and history) to the data-lake
+
             Parameters
             ----------
             parameters : object
                 The snapshot parameters - datalake connection, identity manager connection and snapshot peformance parameters
             snapshots : object
                 The snapshot rows
-            pointers : object
+            references : object
                 The index entries
             """
-                        
+
             self.storage.bulk_put_row(parameters["datalake_url"], 
                     parameters["datalake_namespace"],
                     parameters["datalake_table_name"],
@@ -163,21 +173,38 @@ class Snapshot:
                     snapshots
             )
            
-            for pointer in pointers.keys():  
+            for reference in references.keys():  
+ 
                 self.storage.bulk_put_row(parameters["datalake_url"], 
                     parameters["datalake_namespace"],
-                    pointer.split('/')[0],
+                    reference,
                     parameters["datalake_userid"],
                     parameters["datalake_password"],
-                    pointers[pointer]
+                    references[reference]
             )
-                
+
+        def clear_requests(parameters:object, requests:str) -> None:
+
+            for request in requests:
+
+                self.storage.delete_cell(parameters["datalake_url"], 
+                                parameters["datalake_namespace"],
+                                parameters["datalake_table_name"],
+                                parameters["datalake_userid"],
+                                parameters["datalake_password"],
+                                self.INPROGRESS_ROW_KEY,
+                                "json",
+                                request)
+
+        """
+        Processing starts here for the task
+        """                          
         self.monitor.message(f"[{worker_id}] worker - started processing...")
 
         snapshots = []
-        pointers = new_pointers(indexes)
-        batch_counter = 0
-
+        processed = []
+        references = new_references(indexes)
+ 
         start_timer = 0
         counter = 0
 
@@ -187,8 +214,8 @@ class Snapshot:
                 
                 request = task_queue.get(timeout=1000)
             
-                if (request == "close"):
-                    self.monitor.message(f"[{worker_id}] worker - shutdown commencing...")
+                if (request == "close"):   
+                    self.monitor.message(f"[{worker_id}] worker - close received...")
                     break
 
                 process = json.loads(request)
@@ -197,46 +224,43 @@ class Snapshot:
                                                     parameters["identity_client"],
                                                     parameters["identity_secret"], 
                                                     credential, 
-                                                    process['requestId'])
+                                                    process['request_id'])
 
-                if (request_details["processStatus"] in ["Completed"]):
-                    snapshots.append(set_snapshot_cell(process, 
-                                                        self.accessor.get_request_details(parameters["identity_url"], 
-                                                        parameters["identity_client"],
-                                                        parameters["identity_secret"], 
-                                                        credential, 
-                                                        process['requestId'])))
+                summary = json.loads(request_details["response"])
+
+                processes = summary["processes"] if "processes" in summary else []
+
+                if (len(processes) > 0 and "processStatus" in processes[0] and processes[0]["processStatus"] == "Completed"):
+                    request_details = self.accessor.get_request_details(parameters["identity_url"], 
+                                                                            parameters["identity_client"],
+                                                                            parameters["identity_secret"], 
+                                                                            credential, 
+                                                                            process['request_id'])
+                    history = json.loads(request_details["response"])     
+                    snapshots.append(set_snapshot_cell(process['request_id'], processes[0],  history))
+ 
+                    processed.append(process['column'])
+
                     for index in indexes:
-                        column = set_index_cell(index, request_details)
-               
-                    self.storage.delete_cell(parameters["datalake_url"], 
-                                    parameters["datalake_namespace"],
-                                    parameters["datalake_tyable_name"],
-                                    parameters["datalake_userid"],
-                                    parameters["datalake_password"],
-                                    self.INPROGRESS_ROW_KEY,
-                                    "json",
-                                    process["column"])
+           
+                        column = set_index_cells(index,  processes[0])
 
-                    
-                    batch_counter += 1
-                    
-                    if (batch_counter == parameters["batch_size"]):
-                        self.logger.info(f"[{worker_id}] worker - {counter} - {len(snapshots)} - storing")
+                        if column != None:  
+                            references[index["index"]].append(column)
+                                 
+                    if (len(snapshots) >= parameters["batch_size"]):
+                        self.logger.info(f"[{worker_id}] - {len(snapshots)} - storing")
                         
-                        put_all_rows(parameters, snapshots, pointers)    
-
+                        put_snapshot(parameters, snapshots, references)    
+                        clear_requests(parameters, processed)   
+ 
                         snapshots.clear()  
+                        processed.clear()                      
 
-                        for pointer in pointers.keys():
-                            pointers[pointer] = []
+                        for index in references.keys():
+                            references[index] = []
 
-                        batch_counter = 0
-                    else:
-                        batch_counter += 1
-                    
-                    self.checkpointer.checkpoint(parameters, int(process['completionTime']))
-                    self.monitor.add_counter(Monitor.THROUGHPUT, len(json.dumps(snapshots)))
+                    self.monitor.add_counter(Monitor.THROUGHPUT, len(json.dumps(snapshots, separators=(',', ':'))))
                     self.monitor.add_counter(Monitor.TIMES, (time.perf_counter() - start_timer) * 1000)
 
             except queue.Empty:
@@ -246,15 +270,17 @@ class Snapshot:
                 self.monitor.message(f"[Task] error {repr(error)}")
                 return
 
+        self.monitor.message(f"[{worker_id}] thread terminating...")
+ 
         if len(snapshots) > 0:
             self.logger.info(f"[{worker_id}] worker - {counter} - {len(snapshots)} - storing")
                  
-            put_all_rows(parameters, snapshots, pointers)   
+            put_snapshot(parameters, snapshots, references)   
                              
-            self.monitor.add_counter(Monitor.THROUGHPUT, len(json.dumps(snapshots)))
+            self.monitor.add_counter(Monitor.THROUGHPUT, len(json.dumps(snapshots, separators=(',', ':'))))
             self.monitor.add_counter(Monitor.TIMES, (time.perf_counter() - start_timer) * 1000)           
 
-        self.monitor.message(f"[{worker_id}] worker - shutdown completed")
+        self.monitor.message(f"[{worker_id}] worker - thread terminated")
 
         task_queue.task_done()
 
@@ -301,8 +327,10 @@ class Snapshot:
 
             return checkpoint_time, credential, indexes
 
-        def get_requests(parameters:object, creation_time:str) -> object:
+        def get_requests(parameters:object, checkpoint_time:str) -> object:
             """
+            Get all the requests greater than the creation time
+
             Parameters
             ----------
             parameters : object
@@ -318,8 +346,10 @@ class Snapshot:
                     the number of new requests
             """
 
-            def set_request_row(request_id, creation_time):
+            def set_request_row(request_id, creation_time, process_status):
                 """
+                Set a request row suiable for data lake ingestion
+
                 Parameters
                 ----------
                 request_id : string
@@ -338,11 +368,12 @@ class Snapshot:
                                 "column": {
                                     "family": "text",
                                     "qualifier": f"{creation_time}:{request_id}",
-                                    "value": int(time.time())
+                                    "value": str(int(time.time()) if process_status == 0 else 0)
                                 }
                             }     
                         ]
                     }
+            
             def put_requests(requests:object):
                 """
                 Parameters
@@ -359,14 +390,9 @@ class Snapshot:
                                 parameters["datalake_password"],
                                 requests)
 
-
             request_count = 0
-            batch_counter = 0
-
-
             requests = []
 
-            checkpoint_time = creation_time
             
             while True:  
                 response = self.accessor.get_requests(parameters["identity_url"], 
@@ -376,36 +402,47 @@ class Snapshot:
                                                     0, 
                                                     parameters["page_size"], 
                                                     checkpoint_time)
-                self.monitor.message(f"[retrieve]:  ({response["status_code"]}) - {parameters["page_size"]}   {len(response["requests"])}") 
-                
+               
                 for request in response["requests"]:
-                    process_info = json.dumps(request)
-
-                    requests.append(set_request_row(process_info['requestionId'], process_info['creationTime']))
-                
+                    requests.append(set_request_row(request['requestId'], request['creationTime'], request["processStatus"]))                  
                     request_count += 1
 
-                    if (batch_counter == parameters["batch_size"]): 
-                        put_requests(requests)
-                        batch_counter = 0
-                        requests.clear()
-                    else:
-                        batch_counter += 1
-                  
+                    checkpoint_time = request['creationTime']
+            
+                    self.monitor.inc_counter(Monitor.REQUESTS)
 
-                if len("requests" not in response or response["requests"]) != parameters["page_size"]: 
-                    break
+                self.monitor.message(f"[snapshot]:  ({response["status_code"]}) - {len(response["requests"])}") 
 
+                put_requests(requests) 
                 
-            return checkpoint_time, request_count
+                if len(response["requests"]) != parameters["page_size"]:    
+                    break; 
+                else:
+                    requests.clear()
+                            
+
+            return request_count, checkpoint_time
     
         def queue_requests(parameters:object, task_queue:object):
+            """
+            Write the request id, etc to the task queue
+            
+            Parameters
+            ----------
+            request_id : string
+                The request's process idenitifiers
+            creation_time : string  
+                The request's details including the comments
+
+            Return
+            ------
+                An unprocessed row row with the columns populated
+            """
             next = 0
             queue_length = 0
             batch_count = 0
         
             while True: 
-
                 config, status_code = self.storage.get_columns(parameters["datalake_url"],  
                                                             parameters["datalake_userid"], 
                                                             parameters["datalake_password"], 
@@ -414,13 +451,14 @@ class Snapshot:
                                                             self.INPROGRESS_ROW_KEY,
                                                             next,
                                                             int(parameters["scan_size"])) 
-                for column in config: 
-                    task_queue.put({
-                            "request_id": column["col"].split(":")[1],
-                            "creation_time": column["col"].split(":")[0],
-                            "column": column["col"]
-                    })
 
+                for column in config:
+                    task_queue.put(json.dumps({
+                            "column": column["col"],
+                            "request_id": column["col"].split(":")[2],
+                            "creation_time": column["col"].split(":")[1],
+                            "review_time": column["val"]
+                    }, separators=(',', ':')))
 
                 next += int(parameters["scan_size"])
 
@@ -430,16 +468,30 @@ class Snapshot:
             return next
 
         def set_log_record(snapshot_time:int, queued_requests: int, new_requests:int, checkpoint_time:int, time_taken:int):
-        
-            return json.dumps(
-                 {
-                    "snapshot_time": snapshot_time,
-                    "queued_requests": queued_requests,
-                    "new_requests": new_requests,
-                    "checkpoint_time": checkpoint_time,
-                    "time_taken": time_taken
-                  }
-            )
+            history = []
+            history.append(
+            {
+                "row_key": "!",
+                "cell": [ 
+                    {
+                        "column": {
+                            "family": "json",
+                            "qualifier": str(int(time.time())),
+                            "value": json.dumps(
+                                {
+                                    "snapshot_time": snapshot_time,
+                                    "queued_requests": queued_requests,
+                                    "new_requests": new_requests,
+                                    "checkpoint_time": checkpoint_time,
+                                    "time_taken": time_taken
+                                })
+                        }
+                    }    
+                ]
+            })
+
+            return history
+           
 
         try:
             started_on = int(time.time())
@@ -463,39 +515,32 @@ class Snapshot:
                 thread.start()
                 threads.append(thread)
 
-            new_requests_count = get_requests(parameters)
-            
+            request_count, checkpoint_time = get_requests(parameters, checkpoint_time)
             queued_requests = queue_requests(parameters, task_queue)
  
             for worker in range(num_worker_threads):
                 task_queue.put(f"close")
-
-            self.monitor.message(f"[retrieve]: task waiting on thread join")
-            
+    
             for thread in threads:
-                thread.join()
+                thread.join(timeout=300.0)
 
-            self.checkpointer.finalize(parameters, checkpoint_time)
-
-            monitor.set_snapshot_monitor(started_on, int(time.time()), num_worker_threads, checkpoint_time, next)
-
-            self.monitor.message(f"[retrieve]: checkpoint written - {checkpoint_time}") 
-            self.monitor.message(f"[retrieve]: task completed")
-
-            self.storage.put_row(parameters["datalake_url"], 
+            self.checkpointer.checkpoint(parameters, checkpoint_time)
+                
+            self.monitor.message(f"[snapshot]: checkpoint written - {checkpoint_time}") 
+              
+            self.storage.bulk_put_row(
+                            parameters["datalake_url"], 
                             parameters["datalake_namespace"], 
+                            parameters["datalake_table_name"],   
                             parameters["datalake_userid"], 
                             parameters["datalake_password"], 
-                            parameters["datalake_table_name"], 
-                            Command.SNAPSHOT_ROW, 
-                            "json", "control", set_log_record(started_on, 
-                                                                 queued_requests, 
-                                                                 new_requests_count,
-                                                                 checkpoint_time, 
-                                                                 int(time.time()) - started_on))
-
+                            set_log_record(started_on, 
+                                            queued_requests, 
+                                            request_count,
+                                            checkpoint_time, 
+                                            int(time.time()) - started_on))
         except Exception as error:
-            self.monitor.message(f"[Task] error {repr(error)}")
+            self.monitor.message(f"[Snaspshot] error {repr(error)}")
 
     def execute(self, parameters):
         
@@ -507,4 +552,4 @@ class Snapshot:
         return { 
             "status_code" : 200, 
             "response": f"task: {thread.ident}"
-        }
+        }, 200
