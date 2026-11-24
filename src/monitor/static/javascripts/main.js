@@ -6,6 +6,7 @@ var entryList = [];
 var rows = [];
 
 var barchartThroughput = null;
+var barchartPuts = null;
 var barchartRequests = null;
 var barchartExecuteTime = null;
 
@@ -142,16 +143,22 @@ async function updateStatus() {
 
     barchartRequests.setOptimumScale(counters.requests);
     barchartExecuteTime.setOptimumScale(counters.times);
+    barchartPuts.setOptimumScale(counters.puts);
 
     barchartThroughput.draw(counters.throughput, currentHour, "#008080", "#ccffff", 2);
+    barchartPuts.draw(counters.puts, currentHour, "#008080", "#ccffff", 0);
+
     barchartRequests.draw(counters.requests, currentHour, "#008080", "#ccffff", 0);
     barchartExecuteTime.draw(counters.times, currentHour, "#008080", "#ccffff", 0);
 
     document.getElementById("throughput-label").innerHTML =
         `Throughput Datalake (Units : ${barchartThroughput.precision}) - ${Math.trunc(counters.throughput[currentHour] / barchartThroughput.precision)}`;
 
+   document.getElementById("puts-label").innerHTML =
+        `Puts Datalake (Units : ${barchartPuts.precision}) - ${Math.trunc(counters.puts[currentHour] / barchartPuts.precision)}`;
+
     document.getElementById("executes-label").innerHTML =
-        `Request Returned (Units : ${barchartRequests.precision}) - ${Math.trunc(counters.requests[currentHour] / barchartRequests.precision)}`;
+        `Requests Retured (Units : ${barchartRequests.precision}) - ${Math.trunc(counters.requests[currentHour] / barchartRequests.precision)}`;
 
     document.getElementById("execute-times-label").innerHTML =
         `Execution Time (Units : ${barchartExecuteTime.precision}) - ${Math.trunc(counters.times[currentHour] / barchartExecuteTime.precision)}`;
@@ -376,8 +383,6 @@ window.onload = async function () {
                 "report",
                 []);
 
-            console.log(JSON.stringify(response["response"]["output"][0]["message"]));
-
             for (var column of response["response"]["output"][0]["message"]) {
 
                 if (column["col"] == "json:control") {
@@ -554,7 +559,10 @@ window.onload = async function () {
     document.getElementById(`retain-period`).addEventListener('input', function (event) {
         document.getElementById(`retain-period-value`).innerHTML = event.target.value;
     });
-
+    
+    document.getElementById(`task-timeout`).addEventListener('input', function (event) {
+        document.getElementById(`task-timeout-value`).innerHTML = event.target.value;
+    });
     document.getElementById(`command-dialog`).addEventListener('input', function (event) {
         const container = document.getElementById('command-dialog');
         const fields = container.querySelectorAll('input, select, textarea');
@@ -568,12 +576,14 @@ window.onload = async function () {
     });
 
     barchartThroughput = new BarChart("throughput-container", 24);
+    barchartPuts = new BarChart("puts-container", 24);
     barchartRequests = new BarChart("executes-container", 24);
     barchartExecuteTime = new BarChart("execute-times-container", 24);
 
     var panelView = new PanelView("static/images/expand.svg", "static/images/contract.svg");
 
     panelView.decorate("throughput-collapse", "throughput-collapse-image", "throughput-container", true);
+    panelView.decorate("puts-collapse", "throughput-collapse-image", "throughput-container", true);
     panelView.decorate("executes-collapse", "executes-collapse-image", "executes-container", true);
     panelView.decorate("execute-times-collapse", "execute-times-collapse-image", "execute-times-container", true);
 
