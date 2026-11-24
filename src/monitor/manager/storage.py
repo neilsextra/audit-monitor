@@ -134,7 +134,7 @@ class Storage:
         password : string
             The userid associated password
         table_name : string
-             The table's table nameto drop                 
+             The name of the table to drop               
         """
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
  
@@ -153,7 +153,27 @@ class Storage:
             self.logger.info(f"Failed to create table: {response.status_code} - {response.text}")
         return response
 
-    def put_row(self, base_url:str,  name_space:str, userid:str, password:str,table_name:str, row_key: str, column_family:str, column_qualifier:str, value:str):
+    def put_row(self, base_url:str, name_space:str, table_name:str, userid:str, password:str, row_key: str, column_family:str, column_qualifier:str, value:str):
+        """
+        Single "put" row into the specified table
+        
+        Parameters
+        ----------
+        self : object
+            The owner object
+        base_url : string
+            The data-lake base URL
+        name_space : string
+            The data-lake's name-space 
+        table_name : string
+            The name-spaces table name
+        userid :string
+            The credential's user identifier 
+        password : string
+             The credential's user password 
+        value : object
+             The value to import into the table
+         """
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
          
         url = f"{base_url}/{name_space}:{table_name}/{row_key}" 
@@ -180,8 +200,31 @@ class Storage:
             self.monitor.inc_counter(Monitor.PUTS)
         else:
             self.monitor.message(f"[storage] failed to insert row: {response.status_code} - {response.text}")
+
+        return response
  
     def bulk_put_row(self, base_url:str, name_space:str, table_name:str, userid:str, password:str, values:str):
+        """
+        Bulk "put" rows into the specified table
+        
+        Parameters
+        ----------
+        self : object
+            The owner object
+        base_url : string
+            The data-lake base URL
+        name_space : string
+            The data-lake's name-space 
+        table_name : string
+            The name-spaces table name
+        userid :string
+            The credential's user identifier 
+        password : string
+             The credential's user password 
+        values : object
+             The values to import into the table
+         """
+
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
   
         url = f"{base_url}/{name_space}:{table_name}/false-row-key" 
