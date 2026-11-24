@@ -4,54 +4,35 @@ import json
 import threading
 
 class Checkpointer:
- 
     def __init__(self, monitor, storage) -> None:
         self.monitor = monitor
         self.storage = storage
 
-        self.checkpoint_time = 0
-        self.checkpoint_counter = 0
-
-        self.checkpoint_counter_lock = threading.Lock()
-        self.checkpoint_time_lock = threading.Lock()
-            
-    def set_checkpoint_time(self, checkpoint_time):
-        with self.checkpoint_time_lock:
-            self.checkpoint_time = checkpoint_time
-
     def set_logger(self, logger):
         self.logger = logger
 
+    """
+    Save the checkpoint
+
+    Parameters
+    ----------
+    self : object
+        The owner object
+    parameters : object
+        An array of name/value parameters
+    time : int
+        The checkpoint time to save
+    """
     def checkpoint(self, parameters, time):
 
-        with self.checkpoint_time_lock:
-            if  self.checkpoint_time == 0 or time < self.checkpoint_time:
-                self.checkpoint_time = time
+        response = self.storage.put_row(parameters["datalake_url"],
+                            parameters["datalake_namespace"],
+                            parameters["datalake_table_name"],           
+                            parameters["datalake_userid"],
+                            parameters["datalake_password"],
+                        "$", "json", "checkpoint", 
+                    json.dumps({
+                        'time': time
+                    }))
 
-        with self.checkpoint_counter_lock:
-            self.checkpoint_counter += 1
-
-        if self.checkpoint_counter >= parameters["checkpoint"]:
-            self.storage.put_row(parameters["datalake_url"],
-                                 parameters["datalake_namespace"],
-                                 parameters["datalake_userid"],
-                                 parameters["datalake_password"],
-                                 parameters["datalake_table_name"],
-                                "$", "json", "checkpoint", 
-                            json.dumps({
-                                'time': self.checkpoint_time
-                            }))
-            
-            with self.checkpoint_counter_lock:
-                self.checkpoint_counter = 0
-            
-    def finalize(self, parameters, time):
-        self.storage.put_row(parameters["datalake_url"],
-                             parameters["datalake_namespace"],
-                             parameters["datalake_userid"],
-                             parameters["datalake_password"],
-                             parameters["datalake_table_name"],
-                             "$", "json", "checkpoint", 
-                        json.dumps({
-                            "time": time
-                        }))
+        print(f"Checkpoint : {time} - {response.status_code}")
