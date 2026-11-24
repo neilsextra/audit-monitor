@@ -9,9 +9,9 @@ class Command:
 
     CONFIGURATION_ROW = "$"
     SNAPSHOT_ROW = "?"
-    HISTORY_ROW = "!"
+    HISTORY_ROW = "*"
  
-    def __init__(self, monitor, accessor, storage) -> None:
+    def __init__(self, monitor, accessor, checkpointer, storage) -> None:
         """
         Parameters
         ----------
@@ -26,9 +26,11 @@ class Command:
         self.monitor = monitor      
         self.accessor = accessor
         self.storage = storage
+        self.checkpointer = checkpointer
+        
         self.commands = {
-            "reset": [self.get_configuration, self.drop_table, self.create_table, self.set_tokens, self.set_timestamp, self.recreate_index],
-            "configure": [self.drop_table, self.create_table, self.set_tokens, self.set_timestamp],
+            "reset": [self.get_configuration, self.drop_table, self.create_table, self.set_tokens, self.set_checkpoint, self.recreate_index],
+            "configure": [self.drop_table, self.create_table, self.set_tokens, self.set_checkpoint],
             "regenerate": [self.set_tokens],
             "index": [self.create_index],
             "report": [self.get_configuration],
@@ -108,7 +110,6 @@ class Command:
             parameters["datalake_password"], 
             parameters["datalake_table_name"]):
 
-            print("Before create table")
             response = self.storage.create_table(parameters["datalake_url"], 
                                                 parameters["datalake_namespace"], 
                                                 parameters["datalake_userid"], 
@@ -118,11 +119,11 @@ class Command:
                                                 "text")
             self.monitor.message(f"[{action}] table - '{parameters["datalake_table_name"]}' created")
             
-            return f"[{action}] table - '{parameters["datalake_table_name"]}' created", response.status_code, {}
+            return f"[{action}] table - '{parameters["datalake_table_name"]}' created", response.status_code, context
         else:
             self.monitor.message(f"[{action}] table - '{parameters["datalake_table_name"]}' exists")
             
-            return f"[{action}] table - '{parameters["datalake_table_name"]}' exists", 302, {}
+            return f"[{action}] table - '{parameters["datalake_table_name"]}' exists", 302, context
     
     def drop_table(self, action, parameters, context, arguments = []):
         self.storage.drop_table(parameters["datalake_url"], 
@@ -132,7 +133,7 @@ class Command:
                                         parameters["datalake_table_name"])
         self.monitor.message(f"[{action}] table - '{parameters["datalake_table_name"]}' dropped")
 
-        return f"f[{action}] table - '{parameters["datalake_table_name"]}' dropped", 200, {}
+        return f"f[{action}] table - '{parameters["datalake_table_name"]}' dropped", 200, context
       
     def set_tokens(self, action, parameters, context, arguments = []):
         response_get_tokens, status_code = self.accessor.get_tokens(parameters["identity_url"], 
@@ -151,34 +152,27 @@ class Command:
     
             self.storage.put_row(parameters["datalake_url"], 
                                      parameters["datalake_namespace"], 
+                                     parameters["datalake_table_name"],  
                                      parameters["datalake_userid"], 
                                      parameters["datalake_password"], 
-                                     parameters["datalake_table_name"], 
                                      Command.CONFIGURATION_ROW, 
                                      "json", "control", json.dumps(result))
 
             message = f"[{action}] table - '{parameters["datalake_table_name"]}' token generated and saved"
             self.monitor.message(message)
-            return message, 200, {}
+            return message, 200, context
         else: 
             message = f"[{action}] table - '{parameters["datalake_table_name"]}' token generation failed"
             self.monitor.message(message)
-            return message, 301, {}
+            return message, 301, context
  
-    def set_timestamp(self, action, parameters, context, arguments = []):
-        self.storage.put_row(parameters["datalake_url"], 
-                                     parameters["datalake_namespace"], 
-                                     parameters["datalake_userid"], 
-                                     parameters["datalake_password"], 
-                                     parameters["datalake_table_name"], 
-                                     Command.CONFIGURATION_ROW, 
-                                     "json", "checkpoint", json.dumps({
-                        'time': 0
-                    }))
+    def set_checkpoint(self, action, parameters, context, arguments = []):
+
+        self.checkpointer.checkpoint(parameters, 0)
         
         self.monitor.message(f"[{action}] table - '{parameters["datalake_table_name"]}' timestamp set")
         
-        return f"[{action}] table - '{parameters["datalake_table_name"]}' timestamp set", 200, {}
+        return f"[{action}] table - '{parameters["datalake_table_name"]}' timestamp set", 200, context
 
     def create_index(self, action, parameters, context, arguments = []):
         
@@ -225,21 +219,24 @@ class Command:
 
             self.storage.put_row(parameters["datalake_url"], 
                                             parameters["datalake_namespace"], 
+                                            parameters["datalake_table_name"],  
                                             parameters["datalake_userid"], 
                                             parameters["datalake_password"], 
-                                            parameters["datalake_table_name"], 
                                             Command.CONFIGURATION_ROW, 
-                                            "json", "indexes", json.dumps(indexes))
+                                            "json", "indexes", 
+                                            json.dumps(indexes, separators=(',', ':')))
             
             self.monitor.message(f"[{action}] table - '{parameters["datalake_table_name"]}' index configuration updated")
             self.monitor.message(f"[{action}] table - '{parameters["datalake_table_name"]}' index completed")
  
-            return f"[{action}] table - '{parameters["datalake_table_name"]}' indexed", 200, {}
+            return f"[{action}] table - '{parameters["datalake_table_name"]}' indexed", 200, context
         
         else:
-            return f"[{action}] table - '{parameters["datalake_table_name"]}' required but does not exist and cannot be indexed", 401, {}
+            return f"[{action}] table - '{parameters["datalake_table_name"]}' required but does not exist and cannot be indexed", 401, context
 
     def recreate_index(self, action, parameters, context, arguments = []):
+
+        print(f"{json.dumps(context)}")
 
         args = []
 
