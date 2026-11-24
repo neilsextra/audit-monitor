@@ -73,20 +73,7 @@ class Monitor:
                             "thread": threading.get_ident(),
                             "message": message
                         })
-
-    def set_snapshot_monitor(self, started:int, ended:int, threads:int, checkpoint:int, count:int):
-
-        while len(self.snapshots) >= 100:
-            self.snapshots.pop(0)
-
-        self.snapshots.append({
-            "checkpoint": checkpoint,
-            "count": count,
-            "threads": threads,
-            "started": started,
-            "ended": ended
-        })
-
+        
     def statistics(self):
 
         return {
