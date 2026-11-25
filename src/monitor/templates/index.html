@@ -29,9 +29,10 @@
 
 <script type="text/template" id="snapshot-version">
   <div class="container left">
-    <div class="${class}" id="snapshot-${request}">
+    <div class="${class}" id="snapshot-${time}">
       <label style="font-weight:bold;left-margin:80px;">${time}</label>
-      <p style="font-size: 12px; font-family: 'Lucida Console', 'Courier New', monospace;"">${request}</p>
+      <p style="font-size: 12px;">Time Take: ${time_taken}</p>
+      <p style="font-size: 12px;">Requests: [${new_requests}:${queued_requests}]</p>
     </div>
   </div>
 </script>
