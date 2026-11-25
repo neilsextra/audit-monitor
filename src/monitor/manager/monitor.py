@@ -27,11 +27,15 @@ class Monitor:
 
         self.start_time = time.time()
 
-
-    def set_logger(self, logger):
-        self.logger = logger
-
     def init(self):
+        """
+        Instantiate the object - called from the 'container' as a singleton
+
+        Parameters
+        ----------
+        self : object
+            The 'self' owner object
+        """
 
         now = datetime.now()
 
@@ -52,17 +56,62 @@ class Monitor:
 
         return now.hour
 
-    def add_counter(self, counter, value):
+    def set_logger(self, logger):
+        """
+        Set the FLASK logger 
+
+        Parameters
+        ----------
+        self : object
+            The 'self' owner object
+        logger : object
+            The logger object - manager fo log messages
+        """
         
+        self.logger = logger
+
+    def add_counter(self, counter, value):
+        """
+        Add a value usually other '1' (use inc_counter for this) to the counter
+
+        Parameters
+        ----------
+        self : object
+            The 'self' owner object
+        counter : object (enum)
+            The counter to adjust 
+        value : int
+            The value to add to the counter
+        """       
         hour = self.init()
 
         self.counters[counter][hour] += value  
 
     def  inc_counter(self, counter):
+        """
+        Increment a counter by '1' any other value use add counter
 
+        Parameters
+        ----------
+        self : object
+            The 'self' owner object
+        counter : object (enum)
+            The counter to adjust 
+        """     
         self.add_counter(counter, 1)
 
     def message(self, message:str):
+        """
+        Write a message to the log
+
+        Parameters
+        ----------
+        self : object
+            The 'self' owner object
+        message : string
+            The message to be written to the log
+        """     
+         
         self.logger.info(f"{message}")
  
         self.log = self.log[100:] if len(self.log) > 100 else self.log
