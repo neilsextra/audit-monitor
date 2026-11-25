@@ -381,12 +381,16 @@ window.onload = async function () {
 
             for (var column of response["response"]["output"][0]["message"]) {
 
-                console.log(JSON.stringify(column))
+                var val = JSON.parse( column["val"]);
+
+                console.log(JSON.stringify(val));
 
                 stringUtils.append(template, 'snapshot-timeline',
                     {
                         "time": formatTime(parseInt(column["col"].split(":")[1]), 1000),
-                        "request": "test",
+                        "time_taken": val["time_taken"],
+                        "new_requests": val["new_requests"],
+                        "queued_requests": val["queued_requests"],
                         "class": "container-unselected"
                     });
 
