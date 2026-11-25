@@ -10,6 +10,12 @@ var barchartPuts = null;
 var barchartRequests = null;
 var barchartExecuteTime = null;
 
+/**
+ * Convert a date to epoch time
+ * 
+ * @param {string} date to convert
+ * @return the epoch time 
+ */
 function convert(date) {
     const dateObj = new Date(date);
 
@@ -17,6 +23,13 @@ function convert(date) {
 
 }
 
+/**
+ * Format the time to a gregorian date
+ * 
+ * @param {int} epochTime the Epoch Time
+ * @param {int} adjustment the time may no include milliseconds then should be 1000
+ * @return a gregorian formatted time
+ */
 function formatTime(epochTime, adjustment = 1) {
     const date = new Date(epochTime * adjustment);
 
@@ -32,6 +45,13 @@ function formatTime(epochTime, adjustment = 1) {
 
 }
 
+/**
+ * Send a 'command' to the server
+ * 
+ * @param {string} the server command via the REST protocol
+ * @param {string} an array of commands
+ * @return the command's result
+ */
 async function command(action, args = []) {
     try {
 
@@ -92,9 +112,9 @@ function enable(className, enable = true) {
 
 function snapshots(requests, request) {
     var stringUtils = new StringUtils();
-  
+
     document.getElementById('request-timeline').replaceChildren();
-    
+
     var template = document.getElementById("snapshot-version").text;
     for (var request of requests) {
 
@@ -154,7 +174,7 @@ async function updateStatus() {
     document.getElementById("throughput-label").innerHTML =
         `Throughput Datalake (Units : ${barchartThroughput.precision}) - ${Math.trunc(counters.throughput[currentHour] / barchartThroughput.precision)}`;
 
-   document.getElementById("puts-label").innerHTML =
+    document.getElementById("puts-label").innerHTML =
         `Puts Datalake (Units : ${barchartPuts.precision}) - ${Math.trunc(counters.puts[currentHour] / barchartPuts.precision)}`;
 
     document.getElementById("executes-label").innerHTML =
@@ -163,6 +183,13 @@ async function updateStatus() {
     document.getElementById("execute-times-label").innerHTML =
         `Execution Time (Units : ${barchartExecuteTime.precision}) - ${Math.trunc(counters.times[currentHour] / barchartExecuteTime.precision)}`;
 
+}
+
+
+async function updateLog() {
+    var response = await command("log", ["1", "1000"]);
+
+    console.log(JSON.stringify(response))
 }
 
 function showError(message) {
@@ -226,7 +253,6 @@ function addRow(table, value, callback) {
     cell.innerHTML = value;
 
 }
-
 
 /**
  * Add a index field row
@@ -330,13 +356,59 @@ window.onload = async function () {
 
     document.getElementById("ok-connect").addEventListener('click', async (e) => {
 
-        updateStatus();
+        try {
 
-        enable("server-action");
+            document.getElementById("wait-dialog").showModal();
 
-        document.getElementById("cancel-command-dialog").disabled = false;
+            updateStatus();
+            
+            var message = new Message();
+            var response = await message.command(
+                document.getElementById("datalake-url").value,
+                document.getElementById("datalake-namespace").value,
+                document.getElementById("datalake-userid").value,
+                document.getElementById("datalake-password").value,
+                document.getElementById("identity-url").value,
+                document.getElementById("identity-userid").value,
+                document.getElementById("identity-password").value,
+                document.getElementById("identity-client").value,
+                document.getElementById("identity-secret").value,
+                "log",
+                [1, 1000]);
 
-        document.getElementById("command-dialog").close();
+            var template = document.getElementById("snapshot-version").text;
+             var stringUtils = new StringUtils();
+
+            for (var column of response["response"]["output"][0]["message"]) {
+
+                console.log(JSON.stringify(column))
+
+                stringUtils.append(template, 'snapshot-timeline',
+                    {
+                        "time": formatTime(parseInt(column["col"].split(":")[1]), 1000),
+                        "request": "test",
+                        "class": "container-unselected"
+                    });
+
+            }
+            
+            document.getElementById("wait-dialog").close();
+      
+            document.getElementById("cancel-command-dialog").disabled = false;
+            document.getElementById("command-dialog").close();
+
+        } catch (exception) {
+
+            if (exception.trace) {
+                console.log(exception.trace);
+            } else {
+                console.log(exception);
+            }
+
+            document.getElementById("wait-dialog").close();
+            showError(exception.message);
+
+        }
 
     });
 
@@ -389,13 +461,13 @@ window.onload = async function () {
                     var tokens = JSON.parse(column["val"]);
                     document.getElementById("token-view").replaceChildren();
                     document.getElementById("token-view").appendChild(renderjson(tokens));
-                
+
                 } else if (column["col"] == "json:indexes") {
                     var indexes = JSON.parse(column["val"]);
-                    
+
                     document.getElementById("indexes-view").replaceChildren();
                     document.getElementById("indexes-view").appendChild(renderjson(indexes));
- 
+
                 } else if (column["col"] == "json:checkpoint") {
                     var checkpoint = JSON.parse(column["val"]);
 
@@ -430,6 +502,37 @@ window.onload = async function () {
 
     document.getElementById("index-button").addEventListener('click', async (e) => {
 
+        document.getElementById("wait-dialog").showModal();
+
+        document.getElementById("index-fields").replaceChildren();
+
+        var message = new Message();
+        var response = await message.command(
+            document.getElementById("datalake-url").value,
+            document.getElementById("datalake-namespace").value,
+            document.getElementById("datalake-userid").value,
+            document.getElementById("datalake-password").value,
+            document.getElementById("identity-url").value,
+            document.getElementById("identity-userid").value,
+            document.getElementById("identity-password").value,
+            document.getElementById("identity-client").value,
+            document.getElementById("identity-secret").value,
+            "report",
+            []);
+
+        for (var column of response["response"]["output"][0]["message"]) {
+
+            if (column["col"] == "json:indexes") {
+                var indexes = JSON.parse(column["val"]);
+
+                for (var index of indexes) {
+                    addIndexRow("index-fields", `${index["label"]}:${index["field"]}`);
+                }
+            }
+
+        }
+
+        document.getElementById("wait-dialog").close();
         document.getElementById("index-dialog").showModal();
 
     });
@@ -467,7 +570,8 @@ window.onload = async function () {
                 document.getElementById("scan-size").value,
                 document.getElementById("page-size").value,
                 document.getElementById("check-frequency").value,
-                document.getElementById("retain-period").value
+                document.getElementById("retain-period").value,
+                document.getElementById("task-timeout").value
             );
 
             window.setTimeout(function () {
@@ -502,14 +606,14 @@ window.onload = async function () {
 
         for (var row of rows) {
 
-            if(row.value.length > 0) {
+            if (row.value.length > 0) {
                 indexes.push(row.value);
             }
 
         }
 
         document.getElementById("action-message").innerHTML = "Hit <b>OK</b> to continute the index";
-          
+
         var status = await command("index", indexes);
 
         if (status) {
@@ -537,7 +641,7 @@ window.onload = async function () {
     });
 
     document.getElementById(`thread-count`).addEventListener('input', function (event) {
-         document.getElementById(`thread-count-value`).innerHTML = event.target.value;
+        document.getElementById(`thread-count-value`).innerHTML = event.target.value;
     });
 
     document.getElementById(`batch-size`).addEventListener('input', function (event) {
@@ -545,7 +649,7 @@ window.onload = async function () {
     });
 
     document.getElementById(`scan-size`).addEventListener('input', function (event) {
-         document.getElementById(`scan-size-value`).innerHTML = event.target.value;
+        document.getElementById(`scan-size-value`).innerHTML = event.target.value;
     });
 
     document.getElementById(`page-size`).addEventListener('input', function (event) {
@@ -555,11 +659,11 @@ window.onload = async function () {
     document.getElementById(`check-frequency`).addEventListener('input', function (event) {
         document.getElementById(`check-frequency-value`).innerHTML = event.target.value;
     });
-    
+
     document.getElementById(`retain-period`).addEventListener('input', function (event) {
         document.getElementById(`retain-period-value`).innerHTML = event.target.value;
     });
-    
+
     document.getElementById(`task-timeout`).addEventListener('input', function (event) {
         document.getElementById(`task-timeout-value`).innerHTML = event.target.value;
     });
