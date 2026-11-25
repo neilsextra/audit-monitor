@@ -268,6 +268,8 @@ class Storage:
         headers = {"Accept": "application/json"}
 
         response = requests.get(url, auth=(userid, password), headers=headers, verify=False)
+
+        print(row_key)
         
         if response.status_code == 200:
             data = response.json()
@@ -293,7 +295,7 @@ class Storage:
     
         headers = {"Accept": "application/json"}
 
-        url = f"{base_url}/{name_space}:{table_name}/{row_key}?limit=1&filter=ColumnPaginationFilter(%d,%d)"
+        url = f"{base_url}/{name_space}:{table_name}/{row_key}?limit=1&filter=ColumnPaginationFilter({start},{size})"
         response = requests.get(url, auth=(userid, password), headers=headers, verify=False)
 
         values = []
