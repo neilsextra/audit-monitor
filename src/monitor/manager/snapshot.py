@@ -13,7 +13,7 @@ class Snapshot:
 
     CHECKPOINT_COLUMN = "json:checkpoint"
     TOKENS_COLUMN = "json:tokens"
-    INPROGRESS_ROW_KEY = "!"
+    INPROGRESS_ROW_KEY = "_"
     LOG_ROW_KEY = "-"
  
     def __init__(self, monitor, accessor, storage, checkpointer, command) -> None:
