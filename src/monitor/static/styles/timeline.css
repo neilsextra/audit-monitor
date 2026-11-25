@@ -17,8 +17,18 @@
   margin-left: -3px;
 }
 
+/* Container around content */
+.container {
+  padding: 10px 40px;
+  position: relative;
+  background-color: rgba(0, 0, 0, 0.01);
+  margin-right:40px;
+  margin-bottom: 10px;
+  width: 100%;
+}
+
 /* The circles on the timeline */
-.container-selected::after {
+.container::after {
   content: '';
   position: absolute;
   width: 25px;
@@ -29,34 +39,6 @@
   top: 15px;
   border-radius: 50%;
   z-index: 1;
-}
-
-
-
-/* Container around content */
-.container-unselected {
-  padding: 10px 40px;
-  position: relative;
-  background-color: rgba(0, 0, 0, 0.01);
-  width: 100%;
-}
-
-/* The circles on the timeline */
-.container-unselected::after {
-  content: '';
-  position: absolute;
-  width: 25px;
-  height: 25px;
-  left: 2px;
-  background-color: white;
-  border: 4px solid #FF9F55;
-  top: 15px;
-  border-radius: 50%;
-  z-index: 1;
-}
-
-.container-unselected:hover {
-  background-color: rgba(0, 0, 0, 0.02);
 }
 
 /* Place the container to the right */
