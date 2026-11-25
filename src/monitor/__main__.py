@@ -75,7 +75,7 @@ def get_monitor():
 def get_snapshot():
 
     try:
-        snapshot.execute({
+        return snapshot.execute({
             "datalake_url": request.headers.get('datalake-url'),
             "datalake_namespace": request.headers.get('datalake-namespace'),
             "datalake_userid": request.headers.get('datalake-userid'),
@@ -89,19 +89,13 @@ def get_snapshot():
             "page_size": int(request.values.get('page-size', '100')),
             "check_frequency": int(request.values.get('check-frequency', '2')),
             "retain_period": int(request.values.get('retain-period', '60')),
+            "task_timeout": int(request.values.get('task-timeout', '100')),
             "datalake_table_name":  urlparse(request.headers.get('identity-url')).hostname
         })
 
-        response = {
-            "status_code" : 200
-        }
- 
-        return json.dumps(response, sort_keys=True), int(response["status_code"])
-    
     except Exception as error:
         app.logger.error(repr(error))
         return json.dumps({
-            
             "text": repr(error)
         }, sort_keys=True), 500
     
