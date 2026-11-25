@@ -14,6 +14,7 @@ class Snapshot:
     CHECKPOINT_COLUMN = "json:checkpoint"
     TOKENS_COLUMN = "json:tokens"
     INPROGRESS_ROW_KEY = "!"
+    LOG_ROW_KEY = "-"
  
     def __init__(self, monitor, accessor, storage, checkpointer, command) -> None:
         """
@@ -453,6 +454,8 @@ class Snapshot:
                                                             int(parameters["scan_size"])) 
 
                 for column in config:
+
+                    print(f"Got Column {column["col"]}")
                     task_queue.put(json.dumps({
                             "column": column["col"],
                             "request_id": column["col"].split(":")[2],
@@ -471,7 +474,7 @@ class Snapshot:
             history = []
             history.append(
             {
-                "row_key": "!",
+                "row_key": Snapshot.LOG_ROW_KEY,
                 "cell": [ 
                     {
                         "column": {
@@ -522,7 +525,7 @@ class Snapshot:
                 task_queue.put(f"close")
     
             for thread in threads:
-                thread.join(timeout=300.0)
+                thread.join(timeout=int(parameters["task_timeout"]))
 
             self.checkpointer.checkpoint(parameters, checkpoint_time)
                 
