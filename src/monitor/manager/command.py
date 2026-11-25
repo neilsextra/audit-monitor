@@ -8,8 +8,7 @@ class Command:
         GET_CONFIGURATION = 'get_configuration'
 
     CONFIGURATION_ROW = "$"
-    SNAPSHOT_ROW = "?"
-    HISTORY_ROW = "*"
+    LOG_ROW_KEY = "-"
  
     def __init__(self, monitor, accessor, checkpointer, storage) -> None:
         """
@@ -34,7 +33,7 @@ class Command:
             "regenerate": [self.set_tokens],
             "index": [self.create_index],
             "report": [self.get_configuration],
-            "history": [self.get_history]
+            "log": [self.get_log]
           }
 
         self.actions = {
@@ -84,7 +83,7 @@ class Command:
 
         self.monitor.message(f"[{action}] table - '{parameters["datalake_table_name"]}' configuration: {status_code}")
 
-        return config, status_code,  {
+        return config, status_code, {
             'configuration': {
                 'indexes': indexes,
                 'credential': credential,
@@ -92,16 +91,18 @@ class Command:
             }
         }           
 
-    def get_history(self, action, parameters, context, arguments = []):
-    
-        return self.storage.get_columns(parameters["datalake_url"],  
-                                        parameters["datalake_userid"], 
-                                        parameters["datalake_password"], 
-                                        parameters["datalake_namespace"], 
-                                        parameters["datalake_table_name"],
-                                        self.HISTORY_ROW,
-                                        arguments[0],
-                                        arguments[1]), {} 
+    def get_log(self, action, parameters, context, arguments = []):
+   
+        log, status_code = self.storage.get_columns(parameters["datalake_url"],  
+                                              parameters["datalake_userid"], 
+                                              parameters["datalake_password"], 
+                                              parameters["datalake_namespace"], 
+                                              parameters["datalake_table_name"],
+                                              Command.LOG_ROW_KEY,
+                                              int(arguments[0]),
+                                              int(arguments[1]))
+
+        return log, status_code, context
 
     def create_table(self, action, parameters,  context, arguments = []):
         if not self.storage.table_exists(parameters["datalake_url"], 
@@ -127,10 +128,10 @@ class Command:
     
     def drop_table(self, action, parameters, context, arguments = []):
         self.storage.drop_table(parameters["datalake_url"], 
-                                        parameters["datalake_namespace"], 
-                                        parameters["datalake_userid"], 
-                                        parameters["datalake_password"], 
-                                        parameters["datalake_table_name"])
+                                parameters["datalake_namespace"], 
+                                parameters["datalake_userid"], 
+                                parameters["datalake_password"], 
+                                parameters["datalake_table_name"])
         self.monitor.message(f"[{action}] table - '{parameters["datalake_table_name"]}' dropped")
 
         return f"f[{action}] table - '{parameters["datalake_table_name"]}' dropped", 200, context
@@ -212,6 +213,7 @@ class Command:
                 self.monitor.message(f"[{action}] index - '{parameters["datalake_table_name"]}' - '{index}' created")
 
                 indexes.append({
+                    "label": argument.split(':')[0],
                     "field": argument.split(':')[1],
                     "index": index,
                     "created-on": created_on
