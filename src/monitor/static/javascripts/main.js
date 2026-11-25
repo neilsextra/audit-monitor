@@ -185,11 +185,60 @@ async function updateStatus() {
 
 }
 
-
 async function updateLog() {
-    var response = await command("log", ["1", "1000"]);
 
-    console.log(JSON.stringify(response))
+    try {
+        var message = new Message();
+        var response = await message.command(
+            document.getElementById("datalake-url").value,
+            document.getElementById("datalake-namespace").value,
+            document.getElementById("datalake-userid").value,
+            document.getElementById("datalake-password").value,
+            document.getElementById("identity-url").value,
+            document.getElementById("identity-userid").value,
+            document.getElementById("identity-password").value,
+            document.getElementById("identity-client").value,
+            document.getElementById("identity-secret").value,
+            "log",
+            [1, 1000]);
+
+        var template = document.getElementById("snapshot-version").text;
+        var stringUtils = new StringUtils();
+
+        for (var column of response["response"]["output"][0]["message"]) {
+
+            var val = JSON.parse(column["val"]);
+
+            stringUtils.append(template, 'snapshot-timeline',
+                {
+                    "time": formatTime(parseInt(column["col"].split(":")[1]), 1000),
+                    "time_taken": val["time_taken"],
+                    "new_requests": val["new_requests"],
+                    "queued_requests": val["queued_requests"],
+                    "class": "container-unselected"
+                });
+
+        }
+
+        return true;
+
+    } catch (exception) {
+
+        if (exception.status != 404) {
+            if (exception.trace) {
+                console.log(exception.trace);
+            } else {
+                console.log(exception);
+            }
+
+            document.getElementById("wait-dialog").close();
+            showError(exception.message);
+
+            return false;
+        }
+
+    }
+
 }
 
 function showError(message) {
@@ -300,7 +349,7 @@ window.onload = async function () {
 
     document.getElementById("ok-configure").addEventListener('click', async (e) => {
 
-        document.getElementById("action-message").innerHTML = "Hit <b>OK</b> to continute the configuration";
+        document.getElementById("action-message").innerHTML = "Hit <b>OK</b> to configure the system";
 
         window.action = async () => {
             await command("configure");
@@ -312,7 +361,7 @@ window.onload = async function () {
 
     document.getElementById("ok-regenerate").addEventListener('click', async (e) => {
 
-        document.getElementById("action-message").innerHTML = "Hit <b>OK</b> to continute to regenerate the token";
+        document.getElementById("action-message").innerHTML = "Hit <b>OK</b> to regenerate the token";
 
         window.action = async () => {
             await command("regenerate");
@@ -324,7 +373,7 @@ window.onload = async function () {
 
     document.getElementById("ok-reset").addEventListener('click', async (e) => {
 
-        document.getElementById("action-message").innerHTML = "Hit <b>OK</b> to continute the reset";
+        document.getElementById("action-message").innerHTML = "Hit <b>OK</b> to reset the system";
 
         window.action = async () => {
             await command("reset");
@@ -344,7 +393,6 @@ window.onload = async function () {
 
     });
 
-
     document.getElementById("action-dialog-cancel").addEventListener('click', async (e) => {
 
         document.getElementById("action-dialog").close();
@@ -353,66 +401,21 @@ window.onload = async function () {
 
     });
 
-
     document.getElementById("ok-connect").addEventListener('click', async (e) => {
 
-        try {
+        document.getElementById("wait-dialog").showModal();
+        
+        await updateStatus();
 
-            document.getElementById("wait-dialog").showModal();
+        if (await updateLog()) {
 
-            updateStatus();
-            
-            var message = new Message();
-            var response = await message.command(
-                document.getElementById("datalake-url").value,
-                document.getElementById("datalake-namespace").value,
-                document.getElementById("datalake-userid").value,
-                document.getElementById("datalake-password").value,
-                document.getElementById("identity-url").value,
-                document.getElementById("identity-userid").value,
-                document.getElementById("identity-password").value,
-                document.getElementById("identity-client").value,
-                document.getElementById("identity-secret").value,
-                "log",
-                [1, 1000]);
+            enable("server-action");
 
-            var template = document.getElementById("snapshot-version").text;
-             var stringUtils = new StringUtils();
-
-            for (var column of response["response"]["output"][0]["message"]) {
-
-                var val = JSON.parse( column["val"]);
-
-                console.log(JSON.stringify(val));
-
-                stringUtils.append(template, 'snapshot-timeline',
-                    {
-                        "time": formatTime(parseInt(column["col"].split(":")[1]), 1000),
-                        "time_taken": val["time_taken"],
-                        "new_requests": val["new_requests"],
-                        "queued_requests": val["queued_requests"],
-                        "class": "container-unselected"
-                    });
-
-            }
-            
             document.getElementById("wait-dialog").close();
-      
+
             document.getElementById("cancel-command-dialog").disabled = false;
             document.getElementById("command-dialog").close();
-
-        } catch (exception) {
-
-            if (exception.trace) {
-                console.log(exception.trace);
-            } else {
-                console.log(exception);
-            }
-
-            document.getElementById("wait-dialog").close();
-            showError(exception.message);
-
-        }
+        } 
 
     });
 
@@ -434,7 +437,8 @@ window.onload = async function () {
 
     document.getElementById("refresh-button").addEventListener('click', async (e) => {
 
-        updateStatus();
+        await updateStatus();
+        await updateLog();
 
     });
 
