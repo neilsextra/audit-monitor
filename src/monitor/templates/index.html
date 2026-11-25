@@ -28,9 +28,9 @@
 </head>
 
 <script type="text/template" id="snapshot-version">
-  <div class="container left" onclick="retrieve('${request}')">
+  <div class="container left">
     <div class="${class}" id="snapshot-${request}">
-      <label style="font-weight:bold">${time}</label>
+      <label style="font-weight:bold;left-margin:80px;">${time}</label>
       <p style="font-size: 12px; font-family: 'Lucida Console', 'Courier New', monospace;"">${request}</p>
     </div>
   </div>
@@ -259,7 +259,7 @@
         </div>
     </dialog>
 
-    <dialog id="snapshot-dialog" class="dialog" style="min-width:850px; height:640px; overflow: hidden;">
+    <dialog id="snapshot-dialog" class="dialog" style="min-width:850px; height:600px; overflow: hidden;">
         <p style="font-size: 18px; font-weight: bold; border-bottom:2px groove rgba(0,0,0, 0.2)">Snapshot Parameters...
         </p>
 
@@ -309,7 +309,7 @@
                 <div class="execution-option" style="height:40px; width:600px;">
                     <label for="batch-size"
                         style="display:inline-block; width:80px; font-size:14px; font-weight:bold; margin-left:30px;"
-                        class="field">Batch:</label>
+                        class="field">Batch Size:</label>
                     <input type="range" id="batch-size" name="limit" min="10" max="100" value="10" step="10"
                         list="batch-tickmarks" style="width:510px; left:80px;"></input>
 
@@ -485,41 +485,7 @@
                         <span class="slider-tick-label" style="margin-right:38px;">100</span>
                     </div>
                 </div>
-                <div class="execution-option" style="width:600px; height:40px;">
-                    <label for="page-size"
-                        style="display:inline-block; width:80px; font-size:14px; font-weight:bold; margin-left:30px;"
-                        class="field">Page Size:</label>
-                    <input type="range" id="page-size" name="limit" min="100" max="1000" value="100" step="100"
-                        list="page-size-tickmarks" style="top:-2px; width:510px; left:100px;"></input>
 
-                    <label id="page-size-value" class="current-value" style="margin-left:15px;">100</label>
-
-                    <datalist id="page-size-tickmarks">
-                        <option value="100"></option>
-                        <option value="200"></option>
-                        <option value="300"></option>
-                        <option value="400"></option>
-                        <option value="500"></option>
-                        <option value="600"></option>
-                        <option value="700"></option>
-                        <option value="800"></option>
-                        <option value="900"></option>
-                        <option value="1000"></option>
-                    </datalist>
-
-                    <div class="slider-labels" style="display:block; margin-left:116px; top:18px; width:750px;">
-                        <span class="slider-tick-label" style="margin-right:28px;">100</span>
-                        <span class="slider-tick-label" style="margin-right:28px;">200</span>
-                        <span class="slider-tick-label" style="margin-right:28px;">300</span>
-                        <span class="slider-tick-label" style="margin-right:28px;">400</span>
-                        <span class="slider-tick-label" style="margin-right:28px;">500</span>
-                        <span class="slider-tick-label" style="margin-right:28px;">600</span>
-                        <span class="slider-tick-label" style="margin-right:28px;">700</span>
-                        <span class="slider-tick-label" style="margin-right:28px;">800</span>
-                        <span class="slider-tick-label" style="margin-right:24px;">900</span>
-                        <span class="slider-tick-label" style="margin-right:20px;">1000</span>
-                    </div>
-                </div>
                 
                 <div class="execution-option" style="width:600px; height:40px;">
                     <label for="task-timeout"
