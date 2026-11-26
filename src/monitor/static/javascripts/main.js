@@ -226,7 +226,7 @@ async function updateLog() {
 
     } catch (exception) {
 
-        if (exception.status != 404) {
+        if ( [401, 500].includes(exception.status)) {
             if (exception.trace) {
                 console.log(exception.trace);
             } else {
@@ -238,6 +238,8 @@ async function updateLog() {
 
             return false;
         }
+
+        return true;
 
     }
 
@@ -584,9 +586,9 @@ window.onload = async function () {
                 document.getElementById("task-timeout").value
             );
 
-            window.setTimeout(function () {
-                updateStatus();
-                updateLog();
+            window.setTimeout(async function () {
+                await updateStatus();
+                await updateLog();
             }, 1000);
 
             document.getElementById("snapshot-dialog").close();
