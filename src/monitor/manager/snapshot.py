@@ -1,3 +1,4 @@
+import re
 import queue
 import threading
 import json
@@ -15,6 +16,8 @@ class Snapshot:
     TOKENS_COLUMN = "json:tokens"
     INPROGRESS_ROW_KEY = "_"
     LOG_ROW_KEY = "-"
+
+    FIELD_SEPARATOR = "-"
  
     def __init__(self, monitor, accessor, storage, checkpointer, command) -> None:
         """
@@ -144,14 +147,13 @@ class Snapshot:
                         {
                             "column": {
                                 "family": "text",
-                                "qualifier": f"{details['creationTime']}:{details['requestId']}",
+                                "qualifier": f"{details['creationTime']}{Snapshot.FIELD_SEPARATOR}{details['requestId']}",
                                 "value": str(int(time.time()))
                             }
                         }    
                     ]
             } if value != None else None
 
-        
         def put_snapshot(parameters:object, snapshots:object, references: object) -> None:
             """
             Put (Write) an array of completed requests (summary and history) to the data-lake
@@ -185,17 +187,35 @@ class Snapshot:
             )
 
         def clear_requests(parameters:object, requests:str) -> None:
+            """
+            Parameters
+            ----------
+           parameters : object
+                The snapshot parameters - datalake connection, identity manager connection and snapshot peformance parameters
+            requests : object  
+                The request's queue to clear
+
+            Return
+            ------
+                An snapshot row with the columns populated
+            """
+
+            print(f"Deleting [requests queue]: {len(requests)}")
 
             for request in requests:
-
-                self.storage.delete_cell(parameters["datalake_url"], 
+                column = request.split(":")
+                
+                _, status_code = self.storage.delete_cell(parameters["datalake_url"], 
+                                parameters["datalake_userid"],
+                                parameters["datalake_password"],                           
                                 parameters["datalake_namespace"],
                                 parameters["datalake_table_name"],
-                                parameters["datalake_userid"],
-                                parameters["datalake_password"],
                                 self.INPROGRESS_ROW_KEY,
-                                "json",
-                                request)
+                                column[0],
+                                column[1])
+
+                print(f"Deleting: {column} = {status_code}")
+                
 
         """
         Processing starts here for the task
@@ -219,6 +239,7 @@ class Snapshot:
                     self.monitor.message(f"[{worker_id}] worker - close received...")
                     break
 
+                print(request)
                 process = json.loads(request)
 
                 request_details = self.accessor.get_request(parameters["identity_url"], 
@@ -277,7 +298,8 @@ class Snapshot:
             self.logger.info(f"[{worker_id}] worker - {counter} - {len(snapshots)} - storing")
                  
             put_snapshot(parameters, snapshots, references)   
-                             
+            clear_requests(parameters, processed)        
+            
             self.monitor.add_counter(Monitor.THROUGHPUT, len(json.dumps(snapshots, separators=(',', ':'))))
             self.monitor.add_counter(Monitor.TIMES, (time.perf_counter() - start_timer) * 1000)           
 
@@ -368,7 +390,7 @@ class Snapshot:
                             {
                                 "column": {
                                     "family": "text",
-                                    "qualifier": f"{creation_time}:{request_id}",
+                                    "qualifier": f"{creation_time}{Snapshot.FIELD_SEPARATOR}{request_id}",
                                     "value": str(int(time.time()) if process_status == 0 else 0)
                                 }
                             }     
@@ -455,22 +477,41 @@ class Snapshot:
 
                 for column in config:
 
-                    print(f"Got Column {column["col"]}")
+                    parts = re.split(r'[:-]+', column["col"])
+ 
                     task_queue.put(json.dumps({
                             "column": column["col"],
-                            "request_id": column["col"].split(":")[2],
-                            "creation_time": column["col"].split(":")[1],
+                            "family": parts[0],
+                            "request_id": parts[2],
+                            "creation_time": parts[1],
                             "review_time": column["val"]
                     }, separators=(',', ':')))
 
                 next += int(parameters["scan_size"])
 
                 if (len(config) != int(parameters["scan_size"])):
+                    print(f"len(config) : {len(config)} = {int(parameters["scan_size"])}")
                     break
 
             return next
 
         def set_log_record(snapshot_time:int, queued_requests: int, new_requests:int, checkpoint_time:int, time_taken:int):
+            """
+            Create and save a snapshot record
+
+            Parameters
+            ----------
+            snapshot_time : int
+                The snapshot time            
+            queued_requests : int
+                 The size of the request queue
+            new_requests : int
+                  The number of new of new requests
+            checkpoint_time : int
+                  The check point time
+            time_taken : int
+                  The time taken                     
+            """ 
             history = []
             history.append(
             {
@@ -495,7 +536,6 @@ class Snapshot:
 
             return history
            
-
         try:
             started_on = int(time.time())
             task_queue = queue.Queue()
@@ -546,7 +586,16 @@ class Snapshot:
             self.monitor.message(f"[Snaspshot] error {repr(error)}")
 
     def execute(self, parameters):
-        
+        """
+        Begin the snapshot process
+
+        Parameters
+        ----------
+        self : object
+            The owner object
+        parameters : object
+            An array of name/value parameters
+        """        
         thread = threading.Thread(target=self.task, args=(self.logger,  self.monitor, parameters), daemon=True)
         
         self.monitor.message(f"[execute]:  task thread: '{thread.name}'")
@@ -554,5 +603,5 @@ class Snapshot:
 
         return { 
             "status_code" : 200, 
-            "response": f"task: {thread.ident}"
+            "response": f"task: initiated - succesfully"
         }, 200
