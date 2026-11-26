@@ -202,6 +202,8 @@ async function updateLog() {
             "log",
             [1, 1000]);
 
+        document.getElementById("snapshot-timeline").replaceChildren();
+        
         var template = document.getElementById("snapshot-version").text;
         var stringUtils = new StringUtils();
 
@@ -584,6 +586,7 @@ window.onload = async function () {
 
             window.setTimeout(function () {
                 updateStatus();
+                updateLog();
             }, 1000);
 
             document.getElementById("snapshot-dialog").close();
